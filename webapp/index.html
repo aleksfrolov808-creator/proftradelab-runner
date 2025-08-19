@@ -1,121 +1,11 @@
-# Игра «ПрофТрейдЛаб Раннер» — базовая версия для Telegram Mini App
-
-Ниже — полностью рабочий минимальный скелет проекта, который открывается как мини‑приложение в Telegram (Web App) и запускает простую игру в стиле «Дино Google». Сначала настраиваем бота и кнопку открытия мини‑приложения, затем — фронтенд с игрой.
-
----
-
-## Что получится
-
-* Бот в Telegram с кнопкой **«Играть»**, которая открывает Web App с игрой.
-* Статически хостящаяся страница с игрой на HTML5 Canvas (без внешних библиотек).
-* Простая механика: прыжок, препятствия, подсчёт очков, мобильные тапы.
-
----
-
-## 1) Создаём бота и кнопку для Mini App
-
-1. В Telegram откройте **@BotFather** → команда `/newbot` → задайте имя и юзернейм. Сохраните **BOT\_TOKEN**.
-2. В @BotFather (команда `/setdomain`) задайте домен, на котором будет хоститься Web App (можно позже, но лучше сразу; для GitHub Pages это что-то вроде `https://username.github.io`).
-3. Добавьте описание и команду `/start` (опционально):
-
-   * `/setdescription` → краткое описание,
-   * `/setcommands` → например: `start - открыть игру`.
-
-> **Важно:** Mini App открывается из кнопки «web\_app» (Inline Keyboard или Reply Keyboard). Ниже покажем пример кода на Node.js с **grammY**.
-
----
-
-## 2) Структура проекта
-
-```
-proftradelab-runner/
-  bot/
-    bot.mjs
-  webapp/
-    index.html
-  .env               # BOT_TOKEN=...
-  package.json
-  README.md
-```
-
----
-
-## 3) Backend (бот): grammY + WebApp‑кнопка
-
-**package.json**
-
-```json
-{
-  "name": "proftradelab-runner",
-  "version": "0.1.0",
-  "type": "module",
-  "scripts": {
-    "dev": "node bot/bot.mjs",
-    "start": "node bot/bot.mjs"
-  },
-  "dependencies": {
-    "grammy": "^1.21.1",
-    "dotenv": "^16.4.5"
-  }
-}
-```
-
-**.env**
-
-```
-BOT_TOKEN=ВАШ_ТОКЕН_ОТ_BOTFATHER
-WEBAPP_URL=https://ВАШ_ХОСТИНГ/webapp/index.html
-```
-
-**bot/bot.mjs**
-
-```js
-import 'dotenv/config';
-import { Bot, InlineKeyboard } from 'grammy';
-
-const bot = new Bot(process.env.BOT_TOKEN);
-const webAppUrl = process.env.WEBAPP_URL; // например, https://username.github.io/proftradelab-runner/webapp/index.html
-
-bot.command('start', async (ctx) => {
-  const kb = new InlineKeyboard().webApp('🎮 Играть', webAppUrl);
-  await ctx.reply(
-    'Добро пожаловать в игру «ПрофТрейдЛаб Раннер»! Нажмите, чтобы запустить мини‑приложение.',
-    { reply_markup: kb }
-  );
-});
-
-// Опционально: обработка обычных сообщений
-bot.on('message', async (ctx) => {
-  const kb = new InlineKeyboard().webApp('🎮 Играть', webAppUrl);
-  await ctx.reply('Нажмите, чтобы открыть игру:', { reply_markup: kb });
-});
-
-bot.start();
-console.log('Bot is running');
-```
-
-> Запуск локально: `npm i` → положить токен в `.env` → `npm run dev`. Для продакшена используйте любой Node‑хостинг (Render, Railway, VPS и т.п.).
-
----
-
-## 4) Frontend (Web App): одна страница с игрой
-
-Ниже — **единый файл** `webapp/index.html` (можно просто залить на GitHub Pages / Vercel / Netlify). Он:
-
-* рисует игру на Canvas,
-* поддерживает Space/ArrowUp/Touch,
-* адаптирован под мобильный экран,
-* умеет отправлять результат обратно в бота (как текстовое сообщение) через `window.Telegram?.WebApp` (опционально — можно закомментировать).
-
-**webapp/index.html**
-
-```html
 <!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>ПрофТрейдЛаб Раннер</title>
+  <!-- Встроенный favicon, чтобы не было 404 -->
+  <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦖</text></svg>'>
   <style>
     html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, sans-serif; }
     body { background: #111; color: #fff; display: grid; place-items: center; }
@@ -141,9 +31,7 @@ console.log('Bot is running');
     </div>
   </div>
 
-  <!-- Telegram WebApp JS (опционально; в Telegram он подставится автоматически) -->
   <script>
-    // Инициализация темы Telegram (если открыто в WebApp)
     const tg = window.Telegram?.WebApp;
     try { tg?.expand(); } catch (e) {}
   </script>
@@ -154,27 +42,17 @@ console.log('Bot is running');
     const ctx = canvas.getContext('2d');
     const W = canvas.width; const H = canvas.height;
 
-    // Игровые константы
-    const GROUND_Y = H - 32;       // линия земли
-    const GRAVITY = 0.7;           // гравитация
-    const JUMP_VELOCITY = -12.5;   // сила прыжка
-    const SPEED_START = 6;         // стартовая скорость мира
-    const SPEED_INC = 0.0009;      // прирост скорости за кадр
+    const GROUND_Y = H - 32;
+    const GRAVITY = 0.7;
+    const JUMP_VELOCITY = -12.5;
+    const SPEED_START = 6;
+    const SPEED_INC = 0.0009;
 
-    // Состояние игры
     let worldSpeed = SPEED_START;
     let score = 0, best = Number(localStorage.getItem('ptl_best') || 0);
     let gameOver = false;
 
-    const player = {
-      x: 50,
-      y: GROUND_Y - 28,
-      w: 32,
-      h: 28,
-      vy: 0,
-      onGround: true,
-    };
-
+    const player = { x: 50, y: GROUND_Y - 28, w: 32, h: 28, vy: 0, onGround: true };
     const obstacles = [];
     let spawnTimer = 0;
 
@@ -187,66 +65,42 @@ console.log('Bot is running');
     }
 
     function spawnObstacle() {
-      const h = 20 + Math.floor(Math.random()*30); // 20..50
-      const w = 8 + Math.floor(Math.random()*18);  // 8..26
+      const h = 20 + Math.floor(Math.random()*30);
+      const w = 8 + Math.floor(Math.random()*18);
       obstacles.push({ x: W + 10, y: GROUND_Y - h, w, h, passed:false });
     }
 
     function jump() {
       if (gameOver) return;
-      if (player.onGround) {
-        player.vy = JUMP_VELOCITY;
-        player.onGround = false;
-      }
+      if (player.onGround) { player.vy = JUMP_VELOCITY; player.onGround = false; }
     }
 
-    // Контролы: клавиатура + тач
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space' || e.code === 'ArrowUp' ) { e.preventDefault(); jump(); }
       if (e.code === 'Enter' && gameOver) reset();
     });
     canvas.addEventListener('pointerdown', jump);
 
-    // Основной цикл
     let rafId = null;
-    function loop() {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(update);
-    }
+    function loop() { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(update); }
 
     function update() {
-      // Фон
-      ctx.fillStyle = '#151515';
-      ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#151515'; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#2a2a2a'; ctx.fillRect(0, GROUND_Y, W, 2);
 
-      // Земля (простая линия/полоса)
-      ctx.fillStyle = '#2a2a2a';
-      ctx.fillRect(0, GROUND_Y, W, 2);
-
-      // Спавн препятствий
       spawnTimer -= worldSpeed;
-      if (spawnTimer <= 0) {
-        spawnObstacle();
-        spawnTimer = 120 + Math.random()*140; // расстояние до след. спавна
-      }
+      if (spawnTimer <= 0) { spawnObstacle(); spawnTimer = 120 + Math.random()*140; }
 
-      // Обновление игрока
-      player.vy += GRAVITY;
-      player.y += player.vy;
+      player.vy += GRAVITY; player.y += player.vy;
       if (player.y >= GROUND_Y - player.h) { player.y = GROUND_Y - player.h; player.vy = 0; player.onGround = true; }
 
-      // Двигаем препятствия и проверяем коллизии
-      ctx.fillStyle = '#67e8f9'; // бирюзовые препятствия
+      ctx.fillStyle = '#67e8f9';
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const o = obstacles[i];
         o.x -= worldSpeed;
-        // рисуем
         ctx.fillRect(o.x, o.y, o.w, o.h);
-        // вышло за экран — удаляем
         if (o.x + o.w < 0) obstacles.splice(i,1);
-        // подсчёт очков
         if (!o.passed && o.x + o.w < player.x) { o.passed = true; score += 1; }
-        // коллизия AABB
         if (!gameOver && aabb(player, o)) {
           gameOver = true;
           best = Math.max(best, score);
@@ -255,36 +109,21 @@ console.log('Bot is running');
         }
       }
 
-      // Рисуем игрока (простая «ящерица»)
-      ctx.fillStyle = gameOver ? '#ef4444' : '#a3e635'; // красный при проигрыше
-      roundRect(ctx, player.x, player.y, player.w, player.h, 6);
-      ctx.fill();
+      ctx.fillStyle = gameOver ? '#ef4444' : '#a3e635';
+      roundRect(ctx, player.x, player.y, player.w, player.h, 6); ctx.fill();
 
-      // HUD
       ctx.fillStyle = '#ffffff';
       ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(`Очки: ${score}`, 12, 22);
-      ctx.textAlign = 'right';
-      ctx.fillText(`Рекорд: ${best}`, W - 12, 22);
+      ctx.textAlign = 'left'; ctx.fillText(`Очки: ${score}`, 12, 22);
+      ctx.textAlign = 'right'; ctx.fillText(`Рекорд: ${best}`, W - 12, 22);
 
-      // Поведение при конце игры
-      if (gameOver) {
-        ctx.textAlign = 'center';
-        ctx.fillText('Игра окончена — Enter/Тап для рестарта', W/2, H/2);
-        return; // стопим кадр, ждём действия игрока
-      }
+      if (gameOver) { ctx.textAlign = 'center'; ctx.fillText('Игра окончена — Enter/Тап для рестарта', W/2, H/2); return; }
 
-      // Усложняем постепенно
       worldSpeed += SPEED_INC;
-
       loop();
     }
 
-    function aabb(a,b){
-      return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-    }
-
+    function aabb(a,b){ return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
     function roundRect(ctx, x, y, w, h, r) {
       const rr = Math.min(r, w/2, h/2);
       ctx.beginPath();
@@ -297,74 +136,20 @@ console.log('Bot is running');
     }
 
     function sendResult() {
-      // Отправить результат в Telegram как «данные» из WebApp (опционально)
       try {
         const data = { score, best };
         if (window.Telegram?.WebApp) {
           window.Telegram.WebApp.sendData(JSON.stringify(data));
         }
-      } catch(e) { /* игнорируем */ }
+      } catch(e) {}
     }
 
-    // Кнопка «Заново»
-    document.getElementById('restart').addEventListener('click', () => {
-      if (!gameOver) return; reset();
-    });
-    // Тап по экрану после проигрыша — тоже рестарт
+    document.getElementById('restart').addEventListener('click', () => { if (!gameOver) return; reset(); });
     canvas.addEventListener('pointerdown', () => { if (gameOver) reset(); });
 
-    // Первый запуск
     update();
   })();
   </script>
 </body>
 </html>
-```
 
-> **Интеграция sendData (опционально):** В боте можно слушать `update.message.web_app_data` и, если нужно, сохранять результаты. Пример для grammY:
-
-```js
-bot.on('message:web_app_data', (ctx) => {
-  const data = JSON.parse(ctx.message.web_app_data.data || '{}');
-  const { score, best } = data;
-  return ctx.reply(`Получен результат: очки=${score}, рекорд=${best}`);
-});
-```
-
----
-
-## 5) Хостинг Web App
-
-**Простой путь — GitHub Pages**:
-
-1. Создайте репозиторий, положите туда папку `webapp/`.
-2. В настройках репо включите Pages и выберите ветку `main` → `/root` (или `/webapp`).
-3. Получите URL (например, `https://username.github.io/proftradelab-runner/webapp/`).
-4. В `.env` укажите `WEBAPP_URL` на `.../index.html` и перезапустите бота.
-
-**Альтернативы**: Vercel/Netlify/Cloudflare Pages — просто задеплойте как статический сайт.
-
----
-
-## 6) Что настраиваем дальше (наш план)
-
-* 🎨 Брендинг «ПрофТрейдЛаб»: логотип, цвета, шрифты.
-* 🧱 Меню в WebApp: «Играть», «Таблица лидеров», «Правила».
-* 🏆 Лидерборды: хранить лучшие результаты (Redis/DB) и командные зачёты.
-* 📈 Прогрессии сложности: разные типы препятствий, «скользящие» платформы.
-* 📱 Адаптация под вертикаль 16:9, полноэкранный Canvas, haptics.
-* 🔊 SFX (без лицензии) и тумблер «звук вкл/выкл».
-* 🧩 Телеметрия (анонимно) и ивенты для аналитики.
-* 🔐 Anti‑cheat (проверка очков на стороне сервера, подписи данных).
-
----
-
-## 7) Быстрый чек‑лист запуска
-
-* [ ] Создан бот в @BotFather, получен `BOT_TOKEN`.
-* [ ] WebApp задеплоен и доступен по HTTPS.
-* [ ] В `.env` прописан `WEBAPP_URL`.
-* [ ] Бот запущен (`npm i` → `npm run dev`).
-* [ ] Команда `/start` показывает кнопку **«🎮 Играть»** и открывает игру.
-
-Готово! Это — минимальная, но рабочая база. Дальше мы будем наращивать функциональность шаг за шагом.
