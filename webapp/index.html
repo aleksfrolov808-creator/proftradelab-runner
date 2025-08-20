@@ -17,13 +17,10 @@
     .bar { font-size:14px; margin:6px 0; display:flex; justify-content:space-between; align-items:center; color:#0f0; }
     .btn { background:#222; color:#0f0; border:2px solid #0f0; font-family:monospace; padding:6px 10px; cursor:pointer; }
     .btn:active { background:#0f0; color:#000; }
-    input, label{font-family:monospace;}
     .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.9); display:none; align-items:center; justify-content:center; color:#0f0; font-family:monospace; }
     .panel{ background:#111; border:3px solid #0f0; padding:12px; width:90%; max-width:500px; }
     input[type="text"], input[type="email"], input[type="tel"]{ width:100%; background:#000; border:2px solid #0f0; color:#0f0; padding:6px; margin:4px 0; }
     .checkbox{ display:flex; gap:6px; align-items:flex-start; font-size:12px; color:#0f0; }
-    table{ width:100%; border-collapse:collapse; color:#0f0; font-size:14px; }
-    td,th{ border-bottom:1px solid #0f0; padding:4px; }
   </style>
 </head>
 <body>
@@ -62,8 +59,6 @@
       <h2>Сессия завершена</h2>
       <p>Лучший результат: <span id="finalBest">0</span></p>
       <p>Приз: <span id="prizeText">—</span></p>
-      <h3>Топ-10</h3>
-      <table><tbody id="lbBody"></tbody></table>
       <div style="margin-top:10px;text-align:right;"><button id="resultOk" class="btn">Регистрация</button></div>
     </div>
   </div>
@@ -99,21 +94,18 @@
   const regOverlay=document.getElementById("regOverlay"),resultOverlay=document.getElementById("resultOverlay");
   const startBtn=document.getElementById("startBtn"),resultOk=document.getElementById("resultOk"),regErr=document.getElementById("regErr");
   const fioIn=document.getElementById("fio"),phoneIn=document.getElementById("phone"),emailIn=document.getElementById("email"),consentIn=document.getElementById("consent");
-  const finalBest=document.getElementById("finalBest"),lbBody=document.getElementById("lbBody"),prizeText=document.getElementById("prizeText");
+  const finalBest=document.getElementById("finalBest"),prizeText=document.getElementById("prizeText");
   let profile=null,sessionEndAt=null;
   function openReg(){regOverlay.style.display="flex";} function closeReg(){regOverlay.style.display="none";}
-  startBtn.onclick=()=>{const fio=fioIn.value.trim(),phone=phoneIn.value.trim(),email=emailIn.value.trim();if(!fio){regErr.textContent="Укажите ФИО";return;}if(!consentIn.checked){regErr.textContent="Нужно согласие";return;}profile={fio,phone,email};best=0;score=0;updateHud();sessionEndAt=Date.now()+5*60*1000;closeReg();resetRun();tickTimer();};
+  startBtn.onclick=()=>{const fio=fioIn.value.trim();if(!fio){regErr.textContent="Укажите ФИО";return;}if(!consentIn.checked){regErr.textContent="Нужно согласие";return;}profile={fio};best=0;score=0;updateHud();sessionEndAt=Date.now()+5*60*1000;closeReg();resetRun();tickTimer();};
   resultOk.onclick=()=>{resultOverlay.style.display="none";openReg();};
   let timerId=null;function tickTimer(){clearInterval(timerId);timerId=setInterval(()=>{const left=Math.max(0,(sessionEndAt||0)-Date.now());timeEl.textContent=fmt(left);if(left<=0){clearInterval(timerId);showResults();}},200);}
   function fmt(ms){const s=Math.ceil(ms/1000),m=Math.floor(s/60),ss=String(s%60).padStart(2,"0");return `${String(m).padStart(2,"0")}:${ss}`;}
   function sessionActive(){return sessionEndAt&&Date.now()<sessionEndAt;}
-  function showResults(){if(profile){saveLB(profile.fio,best);}finalBest.textContent=best;prizeText.textContent=getPrize(best);renderLB();resultOverlay.style.display="flex";}
+  function showResults(){finalBest.textContent=best;prizeText.textContent=getPrize(best);resultOverlay.style.display="flex";}
   function getPrize(p){if(p>=3000)return"Термос";if(p>=2000)return"Шоппер";if(p>=1000)return"Блокнот и ручка";if(p>=500)return"Брелок";return"—";}
-  function saveLB(fio,points){const arr=JSON.parse(localStorage.getItem("lb")||"[]");arr.push({fio,points,ts:new Date().toISOString()});arr.sort((a,b)=>b.points-a.points);localStorage.setItem("lb",JSON.stringify(arr.slice(0,10)));}
-  function renderLB(){const arr=JSON.parse(localStorage.getItem("lb")||"[]");lbBody.innerHTML="";arr.forEach((r,i)=>{const d=new Date(r.ts).toLocaleString();lbBody.innerHTML+=`<tr><td>${i+1}</td><td>${r.fio}</td><td>${r.points}</td><td>${d}</td></tr>`;});}
   openReg();updateHud();
 })();
 </script>
 </body>
 </html>
-
