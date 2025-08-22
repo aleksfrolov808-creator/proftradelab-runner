@@ -1,0 +1,13 @@
+{
+  "name": "proftradelab-runner",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node bot/bot.mjs",
+    "start": "node bot/bot.mjs"
+  },
+  "dependencies": {
+    "grammy": "^1.21.1",
+    "dotenv": "^16.4.5"
+  }
+}
