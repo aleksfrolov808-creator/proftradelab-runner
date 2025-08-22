@@ -65,7 +65,7 @@
       <div class="bar">
         <div>
           Очки: <span id="score">0</span> · Рекорд: <span id="best">0</span> · Осталось: <span id="timeLeft">02:00</span>
-          <div class="hint">Подсказка: жмите заранее — прыжок длиннее. Проиграли? Нажмите «Заново».</div>
+          <div class="hint">Управление: Space / ⬆︎ / Тап · Двойной прыжок: нажмите прыжок дважды. Проиграли? «Заново».</div>
         </div>
         <div style="display:flex; gap:8px;">
           <button id="restart" class="btn">Заново</button>
@@ -136,51 +136,81 @@
   const ctx = canvas.getContext('2d');
   let W = canvas.width, H = canvas.height;
   function resizeCanvas() {
-    // соотношение 3:1, максимум 980px ширина
     const container = canvas.parentElement;
     const cssW = Math.min(container.clientWidth, 980);
     const cssH = Math.max(220, Math.round(cssW / 3));
-    // физический размер канваса под DPR для чёткости
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     canvas.style.width = cssW + 'px';
     canvas.style.height = cssH + 'px';
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // логические px = CSS px
-    W = cssW; H = cssH;
-    GROUND_Y = H - 32;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    W = cssW; H = cssH; GROUND_Y = H - 32;
   }
   window.addEventListener('resize', resizeCanvas);
 
-  // ====== ПАРАМЕТРЫ ИГРЫ (мягче, реже препятствия, 8-bit) ======
+  // ====== ПАРАМЕТРЫ ИГРЫ ======
   let GROUND_Y = H - 32;
   const GRAVITY = 0.65;
   const JUMP_VELOCITY = -12.2;
   const SPEED_START = 5;
   const SPEED_INC = 0.00035;
-
-  // спавн реже: 180–360 «единиц расстояния» (зависит от worldSpeed)
-  const SPAWN_MIN = 180, SPAWN_VAR = 180;
+  const SPAWN_MIN = 180, SPAWN_VAR = 180; // реже
 
   let worldSpeed = SPEED_START, score = 0, best = 0, gameOver = false, ready = false;
 
-  const player = { x: 50, y: GROUND_Y - 20, w: 20, h: 20, vy: 0, onGround: true };
+  // Персонаж + двойной прыжок
+  const player = { x: 50, y: GROUND_Y - 20, w: 20, h: 20, vy: 0, onGround: true, jumpCount: 0, maxJumps: 2 };
+
+  // Спрайты препятствий (до 5 типов)
+  const obstacleSprites = [];
+  function loadSprite(path){
+    const img = new Image();
+    img.src = path;
+    img.onload = ()=> img.ready = true;
+    img.onerror = ()=> img.error = true;
+    return img;
+  }
+  // подключаем, если есть в /assets
+  obstacleSprites.push(loadSprite("assets/obstacle1.png")); // базовый блок
+  obstacleSprites.push(loadSprite("assets/obstacle2.png")); // вариант 2
+  obstacleSprites.push(loadSprite("assets/obstacle3.png")); // вариант 3
+  obstacleSprites.push(loadSprite("assets/obstacle4.png")); // широкий (опц.)
+  obstacleSprites.push(loadSprite("assets/obstacle5.png")); // летающий (опц.)
+
   const obstacles = []; let spawnTimer = 0;
 
   function resetRun(){
     worldSpeed = SPEED_START; score = 0; gameOver = false;
-    player.y = GROUND_Y - player.h; player.vy = 0; player.onGround = true;
+    player.y = GROUND_Y - player.h; player.vy = 0; player.onGround = true; player.jumpCount = 0;
     obstacles.length = 0; spawnTimer = 0; loop();
   }
 
   function spawnObstacle(){
-    const s = 10 + Math.floor(Math.random() * 20);
-    obstacles.push({ x: W + 10, y: GROUND_Y - s, w: s, h: s, passed: false });
+    // Типы: 0 — базовый наземный, 1 — широкий наземный (в 2 раза шире), 2 — «летающий» маленький
+    const types = [0,1,2];
+    const type = types[Math.floor(Math.random()*types.length)];
+    let w=32, h=32, y=GROUND_Y-32, spriteIndex=0;
+
+    if (type === 0){ // базовый
+      w=32; h=32; y=GROUND_Y-h; spriteIndex = 0;
+    } else if (type === 1){ // широкий ×2
+      w=64; h=32; y=GROUND_Y-h; spriteIndex = 3; // если obstacle4.png нет — используем fallback
+    } else if (type === 2){ // летающий маленький
+      w=20; h=20; y=GROUND_Y - 90; spriteIndex = 4; // obstacle5.png; если нет — fallback
+    }
+
+    const sprite = obstacleSprites[spriteIndex] || null;
+    obstacles.push({ x: W + 10, y, w, h, type, passed: false, sprite });
   }
 
   function jump(){
     if (gameOver || !sessionActive() || !ready) return;
-    if (player.onGround) { player.vy = JUMP_VELOCITY; player.onGround = false; }
+    if (player.jumpCount < player.maxJumps) {
+      player.vy = JUMP_VELOCITY;
+      player.onGround = false;
+      player.jumpCount++;
+    }
   }
 
   window.addEventListener('keydown', e => {
@@ -192,7 +222,7 @@
   let rafId=null; function loop(){ cancelAnimationFrame(rafId); rafId = requestAnimationFrame(update); }
 
   function update(){
-    // фон
+    // фон и «земля»
     ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H);
     const grd = ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);
     grd.addColorStop(0,"#17F1E9"); grd.addColorStop(1,"#00C1C4");
@@ -200,18 +230,33 @@
 
     if(!sessionActive()){ dimOverlay('Сессия завершена'); return; }
 
+    // спавн реже
     spawnTimer -= worldSpeed;
     if (spawnTimer <= 0) { spawnObstacle(); spawnTimer = SPAWN_MIN + Math.random()*SPAWN_VAR; }
 
-    // игрок
+    // игрок (гравитация + приземление + сброс прыжков)
     player.vy += GRAVITY; player.y += player.vy;
-    if (player.y >= GROUND_Y - player.h){ player.y = GROUND_Y - player.h; player.vy = 0; player.onGround = true; }
+    if (player.y >= GROUND_Y - player.h){
+      player.y = GROUND_Y - player.h; player.vy = 0; 
+      if (!player.onGround){ player.onGround = true; player.jumpCount = 0; }
+    } else {
+      player.onGround = false;
+    }
 
-    // препятствия (AABB с «прощением» 2px)
-    ctx.fillStyle = '#17F1E9';
+    // препятствия
     for (let i=obstacles.length-1;i>=0;i--){
-      const o = obstacles[i]; o.x -= worldSpeed;
-      ctx.fillRect(o.x, o.y, o.w, o.h);
+      const o = obstacles[i];
+      o.x -= worldSpeed;
+
+      // рендер: спрайт (если есть) или fallback-квадрат
+      if (o.sprite && o.sprite.ready && !o.sprite.error){
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(o.sprite, o.x, o.y, o.w, o.h);
+      } else {
+        ctx.fillStyle = '#17F1E9';
+        ctx.fillRect(o.x, o.y, o.w, o.h);
+      }
+
       if (o.x + o.w < 0) obstacles.splice(i,1);
       if (!o.passed && o.x + o.w < player.x){ o.passed = true; score++; updateHud(); }
       if (!gameOver && collideForgiven(player,o,2)){
@@ -219,6 +264,7 @@
       }
     }
 
+    // игрок
     ctx.fillStyle = gameOver ? '#f33' : '#0f0';
     ctx.fillRect(player.x, player.y, player.w, player.h);
 
@@ -297,16 +343,12 @@
   function showResults(){
     finalBest.textContent = String(best);
     prizeText.textContent = getPrize(best);
-    // Можно также отправить результаты в Telegram бота:
-    try{
-      if (window.Telegram?.WebApp){
-        window.Telegram.WebApp.sendData(JSON.stringify({ type:'session_result', profile, best }));
-      }
-    }catch(e){}
+    // при желании можно отправить в бота:
+    try{ if (window.Telegram?.WebApp){ window.Telegram.WebApp.sendData(JSON.stringify({ type:'session_result', profile, best })); } }catch(e){}
     resultOverlay.style.display='flex';
   }
 
-  // Новые пороги призов:
+  // Пороги призов (20–30 / 30–50 / 50–70 / 70+)
   function getPrize(p){
     if (p >= 70) return 'Термос';
     if (p >= 50) return 'Шоппер';
@@ -327,7 +369,6 @@
     step();
   }
   function drawCountdown(n){
-    // затемнение
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0,0,W,H);
     ctx.font = 'bold 56px monospace'; ctx.textAlign='center'; ctx.fillStyle = '#17F1E9';
     ctx.fillText(n ?? ' ', W/2, H/2);
@@ -338,11 +379,10 @@
     ctx.fillText(msg, W/2, H/2);
   }
 
-  // старт: адаптация под экран + форма
+  // старт
   resizeCanvas();
   openReg();
   updateHud();
-  // статичная подложка до старта
   (function first(){
     ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
     const g=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y); g.addColorStop(0,'#17F1E9'); g.addColorStop(1,'#00C1C4');
@@ -352,4 +392,3 @@
 </script>
 </body>
 </html>
-
