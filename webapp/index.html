@@ -2,10 +2,8 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
-/>
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <title>ПрофТрейдЛаб — 8-bit Runner</title>
   <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="%2317F1E9"/><text x="50" y="70" text-anchor="middle" font-size="70" fill="black">🧪</text></svg>'>
   <style>
@@ -13,11 +11,16 @@
       --brand:#17F1E9; --brand-2:#00C1C4;
       --bg:#000; --card:#0b0b0b; --ok:#0f0; --bad:#f33; --text:#d9fff9; --muted:#9beee7;
       --pad:12px;
+      --app-height:100vh; /* переопределим из JS по real viewport */
     }
     *{ box-sizing:border-box; }
     html,body{ height:100%; margin:0; font-family:monospace; background:var(--bg); color:var(--text); }
-    body{ min-height:100dvh; display:grid; place-items:stretch; }
-    .wrap{ width:100%; height:100dvh; padding:0; display:flex; }
+    body{ min-height:var(--app-height); }
+    .wrap{
+      width:100%;
+      min-height:var(--app-height);
+      display:flex;
+    }
     .card{
       flex:1; display:flex; flex-direction:column;
       background:var(--card); border:3px solid var(--brand); border-radius:0; image-rendering:pixelated;
@@ -26,7 +29,7 @@
     h1{ font-size:20px; margin:0; padding:10px var(--pad); display:flex; align-items:center; gap:10px;
         background:linear-gradient(45deg, rgba(23,241,233,.08), rgba(0,193,196,.08));
         border-bottom:1px solid rgba(23,241,233,.35);}
-    .gameBox{ flex:1; display:flex; flex-direction:column; }
+    .gameBox{ flex:1; display:flex; flex-direction:column; min-height:0; }
     canvas{ display:block; width:100%; height:auto; background:#111; image-rendering:pixelated; }
     .bar{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; padding:8px var(--pad); flex-wrap:wrap; }
     .hint{ font-size:12px; color:var(--muted); }
@@ -34,13 +37,27 @@
     .btn:active{ background:var(--brand); color:#001314; }
     .btn.brand{ background: linear-gradient(0.125turn, var(--brand) 0%, var(--brand-2) 100%); color:#001314; border-color:transparent; }
 
-    /* Оверлеи */
-    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.9); display:none; align-items:center; justify-content:center; padding:16px; z-index:50; }
-    .panel{ background:#0e0e0e; border:3px solid var(--brand); border-radius:10px; box-shadow:0 0 18px rgba(23,241,233,.45); width:100%; max-width:860px; }
-    .panel .inner{ display:grid; gap:14px; padding:16px; grid-template-columns: 1fr 320px; }
+    /* Оверлеи: фикс, с внутренним скроллом, чтобы при клавиатуре всё не прыгало */
+    .overlay{
+      position:fixed; inset:0; background:rgba(0,0,0,.9); display:none;
+      align-items:center; justify-content:center; padding:16px; z-index:50;
+      height:var(--app-height); /* фиксируем видимую высоту */
+    }
+    .panel{
+      background:#0e0e0e; border:3px solid var(--brand); border-radius:10px;
+      box-shadow:0 0 18px rgba(23,241,233,.45);
+      width:100%; max-width:860px;
+      max-height:calc(var(--app-height) - 32px);
+      display:flex; flex-direction:column;
+    }
+    .panel .inner{
+      display:grid; gap:14px; padding:16px; grid-template-columns: 1fr 320px;
+      overflow:auto; /* прокрутка контента вместо перерисовки канваса */
+    }
     @media (max-width: 740px){
       .panel .inner{ grid-template-columns: 1fr; }
     }
+
     input[type="text"],input[type="tel"],input[type="email"]{
       width:100%; background:#000; border:2px solid var(--brand); color:#cffff8; padding:8px; border-radius:6px; margin-top:4px;
     }
@@ -57,8 +74,10 @@
     .p-name{ color:#bffff6; }
 
     .countdownText{ position:absolute; left:50%; top:45%; transform:translate(-50%,-50%); font-size:56px; color:var(--brand); text-shadow:0 0 16px rgba(23,241,233,.7); }
-
     .panel .center{ padding:16px; }
+
+    /* Когда клавиатура открыта — не даём body прыгать */
+    body.kb-open{ overflow:hidden; }
   </style>
 </head>
 <body>
@@ -91,24 +110,24 @@
 
           <div class="field">
             <label>Фамилия *</label>
-            <input id="lastName" type="text" placeholder="Иванов" required>
+            <input id="lastName" type="text" placeholder="Иванов" required autocomplete="family-name">
           </div>
           <div class="field">
             <label>Имя *</label>
-            <input id="firstName" type="text" placeholder="Иван" required>
+            <input id="firstName" type="text" placeholder="Иван" required autocomplete="given-name">
           </div>
           <div class="field">
             <label>Отчество <span class="note">(необязательно)</span></label>
-            <input id="middleName" type="text" placeholder="Иванович">
+            <input id="middleName" type="text" placeholder="Иванович" autocomplete="additional-name">
           </div>
 
           <div class="field">
             <label>Телефон</label>
-            <input id="phone" type="tel" placeholder="+7 900 000-00-00">
+            <input id="phone" type="tel" placeholder="+7 900 000-00-00" autocomplete="tel">
           </div>
           <div class="field">
             <label>Email</label>
-            <input id="email" type="email" placeholder="name@example.com">
+            <input id="email" type="email" placeholder="name@example.com" autocomplete="email" inputmode="email">
           </div>
 
           <label class="checkbox"><input id="consent" type="checkbox"> Согласен на обработку персональных данных</label>
@@ -150,7 +169,7 @@
 
 <script>
 (function(){
-  // Попытка расширить Telegram WebApp до полного экрана
+  // Telegram полноэкранный режим
   try{
     if (window.Telegram && window.Telegram.WebApp) {
       Telegram.WebApp.expand();
@@ -159,15 +178,55 @@
     }
   }catch(e){}
 
-  // ====== АДАПТИВНЫЙ CANVAS ======
+  // ====== ФИКС ВЫСОТЫ ЭКРАНА С КЛАВИАТУРОЙ ======
+  let keyboardOpen = false;
+  function setAppHeight(h){
+    document.documentElement.style.setProperty('--app-height', h + 'px');
+  }
+  function applyViewportHeight(){
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    setAppHeight(vh);
+  }
+  applyViewportHeight();
+  window.addEventListener('resize', applyViewportHeight);
+  if (window.visualViewport){
+    window.visualViewport.addEventListener('resize', ()=>{
+      const base = window.innerHeight || document.documentElement.clientHeight;
+      const vv = window.visualViewport.height;
+      // если высота заметно меньше базовой — считаем, что клавиатура открыта
+      const wasOpen = keyboardOpen;
+      keyboardOpen = vv < base * 0.85;
+      document.body.classList.toggle('kb-open', keyboardOpen);
+      applyViewportHeight();
+      // при открытии клавиатуры не ресайзим канвас (оставим как было)
+      if (!wasOpen && keyboardOpen) lockCanvasSize();
+      if (wasOpen && !keyboardOpen) { unlockCanvasSize(); resizeCanvas(); }
+    }, {passive:true});
+  }
+
+  // ====== КАНВАС ======
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   let W = canvas.width, H = canvas.height;
+  let lockedSize = null;
+
+  function lockCanvasSize(){
+    // фиксируем текущие CSS размеры, чтобы канвас не прыгал
+    lockedSize = {
+      w: canvas.getBoundingClientRect().width,
+      h: canvas.getBoundingClientRect().height,
+      cssW: canvas.style.width,
+      cssH: canvas.style.height,
+      width: canvas.width,
+      height: canvas.height
+    };
+  }
+  function unlockCanvasSize(){ lockedSize = null; }
 
   function resizeCanvas() {
-    // занимаем максимально доступную площадь — высота = 60% от экрана (удобно для тач)
+    if (lockedSize) return; // пока клавиатура открыта — не менять размеры
     const vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-    const vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+    const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
     const cssW = vw;
     const cssH = Math.max(240, Math.round(vh * 0.6));
 
@@ -187,20 +246,17 @@
   const GRAVITY = 0.65;
   const JUMP_VELOCITY = -12.2;
 
-  // скорость растёт ПО ВРЕМЕНИ (плавно и постоянно)
-  const SPEED_START = 5;          // начальная скорость
-  const SPEED_ACCEL = 0.02;       // на сколько растёт скорость в 1 секунду (подберите под вкус)
+  // плавный рост скорости по времени
+  const SPEED_START = 5;
+  const SPEED_ACCEL = 0.02; // px/s
   let worldSpeed = SPEED_START;
 
-  // спавн препятствий (редко/средне)
   const SPAWN_MIN = 180, SPAWN_VAR = 180;
 
   let score = 0, best = 0, gameOver = false, ready = false, runStart = Date.now();
 
-  // Персонаж + двойной прыжок
   const player = { x: 50, y: GROUND_Y - 20, w: 20, h: 20, vy: 0, onGround: true, jumpCount: 0, maxJumps: 2 };
 
-  // Спрайты препятствий (если файлов нет — будет fallback-квадрат)
   const obstacleSprites = [];
   function loadSprite(path){
     const img = new Image();
@@ -225,18 +281,13 @@
   }
 
   function spawnObstacle(){
-    // Типы: 0 — базовый наземный (32x32), 1 — широкий (64x32), 2 — «летающий» маленький (20x20)
     const types = [0,1,2];
     const type = types[Math.floor(Math.random()*types.length)];
     let w=32, h=32, y=GROUND_Y-32, spriteIndex=0;
 
-    if (type === 0){ // базовый
-      w=32; h=32; y=GROUND_Y-h; spriteIndex = 0;
-    } else if (type === 1){ // широкий ×2
-      w=64; h=32; y=GROUND_Y-h; spriteIndex = 3;
-    } else if (type === 2){ // летающий маленький
-      w=20; h=20; y=GROUND_Y - Math.max(70, Math.min(140, H*0.25)); spriteIndex = 4;
-    }
+    if (type === 0){ w=32; h=32; y=GROUND_Y-h; spriteIndex = 0; }
+    else if (type === 1){ w=64; h=32; y=GROUND_Y-h; spriteIndex = 3; }
+    else if (type === 2){ w=20; h=20; y=GROUND_Y - Math.max(70, Math.min(140, H*0.25)); spriteIndex = 4; }
 
     const sprite = obstacleSprites[spriteIndex] || null;
     obstacles.push({ x: W + 10, y, w, h, type, passed: false, sprite });
@@ -290,7 +341,6 @@
       const o = obstacles[i];
       o.x -= worldSpeed;
 
-      // спрайт или fallback-квадрат
       if (o.sprite && o.sprite.ready && !o.sprite.error){
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(o.sprite, o.x, o.y, o.w, o.h);
