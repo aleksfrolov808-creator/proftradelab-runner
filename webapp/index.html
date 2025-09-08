@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport"
-        content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+        content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
   <title>ПрофТрейдЛаб — 8-bit Runner</title>
   <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="%2317F1E9"/><text x="50" y="70" text-anchor="middle" font-size="70" fill="black">🧪</text></svg>'>
   <style>
@@ -11,20 +11,36 @@
       --brand:#17F1E9; --brand-2:#00C1C4;
       --bg:#000; --card:#0b0b0b; --ok:#0f0; --bad:#f33; --text:#d9fff9; --muted:#9beee7;
       --pad:12px;
-      --app-height:100vh; /* переопределим из JS по real viewport */
+      --app-height:100vh; /* переопределим из JS, учитывая клавиатуру/вебвью */
     }
     *{ box-sizing:border-box; }
     html,body{ height:100%; margin:0; font-family:monospace; background:var(--bg); color:var(--text); }
-    body{ min-height:var(--app-height); }
-    .wrap{
-      width:100%;
-      min-height:var(--app-height);
-      display:flex;
+
+    /* Корневой контейнер, который будем «поворачивать» в портрете */
+    #app-root {
+      position: relative;
+      width: 100%;
+      min-height: var(--app-height);
+      display: flex;
     }
+
+    /* В портрете разворачиваем весь интерфейс на 90°, создавая «виртуальный landscape» */
+    .portrait-force-landscape #app-root{
+      position: fixed;
+      inset: 0;
+      transform: rotate(90deg);
+      transform-origin: top left;
+      width: calc(var(--app-height));
+      height: 100vw;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .wrap{ flex:1; display:flex; }
     .card{
       flex:1; display:flex; flex-direction:column;
-      background:var(--card); border:3px solid var(--brand); border-radius:0; image-rendering:pixelated;
-      box-shadow:0 0 18px rgba(23,241,233,.45);
+      background:var(--card); border:3px solid var(--brand); border-radius:0;
+      image-rendering:pixelated; box-shadow:0 0 18px rgba(23,241,233,.45);
     }
     h1{ font-size:20px; margin:0; padding:10px var(--pad); display:flex; align-items:center; gap:10px;
         background:linear-gradient(45deg, rgba(23,241,233,.08), rgba(0,193,196,.08));
@@ -37,11 +53,11 @@
     .btn:active{ background:var(--brand); color:#001314; }
     .btn.brand{ background: linear-gradient(0.125turn, var(--brand) 0%, var(--brand-2) 100%); color:#001314; border-color:transparent; }
 
-    /* Оверлеи: фикс, с внутренним скроллом, чтобы при клавиатуре всё не прыгало */
+    /* Оверлеи (регистрация/результаты) — фикс высоты и внутренний скролл */
     .overlay{
       position:fixed; inset:0; background:rgba(0,0,0,.9); display:none;
-      align-items:center; justify-content:center; padding:16px; z-index:50;
-      height:var(--app-height); /* фиксируем видимую высоту */
+      align-items:center; justify-content:center; padding:16px; z-index:999; /* выше повернутого корня */
+      height:var(--app-height);
     }
     .panel{
       background:#0e0e0e; border:3px solid var(--brand); border-radius:10px;
@@ -52,20 +68,17 @@
     }
     .panel .inner{
       display:grid; gap:14px; padding:16px; grid-template-columns: 1fr 320px;
-      overflow:auto; /* прокрутка контента вместо перерисовки канваса */
+      overflow:auto;
     }
     @media (max-width: 740px){
       .panel .inner{ grid-template-columns: 1fr; }
     }
-
     input[type="text"],input[type="tel"],input[type="email"]{
       width:100%; background:#000; border:2px solid var(--brand); color:#cffff8; padding:8px; border-radius:6px; margin-top:4px;
     }
     .field{ margin:6px 0; }
     .checkbox{ display:flex; gap:8px; align-items:flex-start; font-size:12px; color:#bffff6; }
     .note{ font-size:11px; color:#9beee7; }
-
-    /* Табличка призов справа */
     .prizes{ border:2px solid var(--brand); border-radius:8px; padding:10px; background:#0a0a0a; }
     .prizes h3{ margin:0 0 8px; font-size:16px; }
     .prize-row{ display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px dashed rgba(23,241,233,.45); }
@@ -73,103 +86,109 @@
     .p-points{ color:#17F1E9; }
     .p-name{ color:#bffff6; }
 
-    .countdownText{ position:absolute; left:50%; top:45%; transform:translate(-50%,-50%); font-size:56px; color:var(--brand); text-shadow:0 0 16px rgba(23,241,233,.7); }
-    .panel .center{ padding:16px; }
-
-    /* Когда клавиатура открыта — не даём body прыгать */
-    body.kb-open{ overflow:hidden; }
+    /* Подсказка «Поверните устройство» (если захочешь включить) */
+    .rotate-hint {
+      position: fixed; inset: 0;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.8); color: #d9fff9; z-index: 10000;
+      text-align: center; padding: 16px; font-family: monospace;
+      border: 3px solid #17F1E9;
+    }
+    .rotate-hint.show { display: flex; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>🧪 ПрофТрейдЛаб 8-bit Runner</h1>
+  <div id="app-root">
+    <div class="wrap">
+      <div class="card">
+        <h1>🧪 ПрофТрейдЛаб 8-bit Runner</h1>
 
-      <div class="gameBox">
-        <canvas id="game" width="1200" height="400"></canvas>
-        <div class="bar">
+        <div class="gameBox">
+          <canvas id="game" width="1200" height="400"></canvas>
+          <div class="bar">
+            <div>
+              Очки: <span id="score">0</span> · Рекорд: <span id="best">0</span> · Осталось: <span id="timeLeft">02:00</span>
+              <div class="hint">Управление: Space / ⬆︎ / Тап · Двойной прыжок: нажмите прыжок дважды.</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button id="restart" class="btn">Заново</button>
+              <button id="newSession" class="btn brand">Регистрация</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- оверлеи рендерим поверх всего -->
+    <div id="regOverlay" class="overlay" style="display:flex">
+      <div class="panel">
+        <div class="inner">
           <div>
-            Очки: <span id="score">0</span> · Рекорд: <span id="best">0</span> · Осталось: <span id="timeLeft">02:00</span>
-            <div class="hint">Управление: Space / ⬆︎ / Тап · Двойной прыжок: нажмите прыжок дважды.</div>
+            <h2 style="margin:4px 0 10px">Регистрация</h2>
+
+            <div class="field">
+              <label>Фамилия *</label>
+              <input id="lastName" type="text" placeholder="Иванов" required autocomplete="family-name">
+            </div>
+            <div class="field">
+              <label>Имя *</label>
+              <input id="firstName" type="text" placeholder="Иван" required autocomplete="given-name">
+            </div>
+            <div class="field">
+              <label>Отчество <span class="note">(необязательно)</span></label>
+              <input id="middleName" type="text" placeholder="Иванович" autocomplete="additional-name">
+            </div>
+
+            <div class="field">
+              <label>Телефон</label>
+              <input id="phone" type="tel" placeholder="+7 900 000-00-00" autocomplete="tel">
+            </div>
+            <div class="field">
+              <label>Email</label>
+              <input id="email" type="email" placeholder="name@example.com" autocomplete="email" inputmode="email">
+            </div>
+
+            <label class="checkbox"><input id="consent" type="checkbox"> Согласен на обработку персональных данных</label>
+            <div class="note">Данные нужны для выдачи приза и связи с вами.</div>
+
+            <div style="margin-top:12px; text-align:right;">
+              <button id="startBtn" class="btn brand">Продолжить</button>
+            </div>
+            <div id="regErr" style="color:#ff8a8a; margin-top:6px;"></div>
           </div>
-          <div style="display:flex; gap:8px;">
-            <button id="restart" class="btn">Заново</button>
-            <button id="newSession" class="btn brand">Регистрация</button>
+
+          <div class="prizes">
+            <h3>Призы и очки</h3>
+            <div class="prize-row"><div class="p-points">20–30</div><div class="p-name">Брелок</div></div>
+            <div class="prize-row"><div class="p-points">30–50</div><div class="p-name">Блокнот и ручка</div></div>
+            <div class="prize-row"><div class="p-points">50–70</div><div class="p-name">Шоппер</div></div>
+            <div class="prize-row"><div class="p-points">70+</div><div class="p-name">Термос</div></div>
+            <div style="margin-top:8px" class="note">Очки — лучший результат за 2 минуты.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultOverlay" class="overlay">
+      <div class="panel">
+        <div class="center" style="padding:16px;">
+          <h2 style="margin:4px 0 10px">Сессия завершена</h2>
+          <p>Ваш лучший результат: <b id="finalBest">0</b> очков.</p>
+          <p>Вы выиграли: <b id="prizeText">—</b></p>
+          <p style="margin-top:8px">Пожалуйста, обратитесь к администратору для получения приза.</p>
+          <div style="margin-top:12px;text-align:right;">
+            <button id="resultOk" class="btn brand">Новая регистрация</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Регистрация -->
-  <div id="regOverlay" class="overlay" style="display:flex">
-    <div class="panel">
-      <div class="inner">
-        <div>
-          <h2 style="margin:4px 0 10px">Регистрация</h2>
-
-          <div class="field">
-            <label>Фамилия *</label>
-            <input id="lastName" type="text" placeholder="Иванов" required autocomplete="family-name">
-          </div>
-          <div class="field">
-            <label>Имя *</label>
-            <input id="firstName" type="text" placeholder="Иван" required autocomplete="given-name">
-          </div>
-          <div class="field">
-            <label>Отчество <span class="note">(необязательно)</span></label>
-            <input id="middleName" type="text" placeholder="Иванович" autocomplete="additional-name">
-          </div>
-
-          <div class="field">
-            <label>Телефон</label>
-            <input id="phone" type="tel" placeholder="+7 900 000-00-00" autocomplete="tel">
-          </div>
-          <div class="field">
-            <label>Email</label>
-            <input id="email" type="email" placeholder="name@example.com" autocomplete="email" inputmode="email">
-          </div>
-
-          <label class="checkbox"><input id="consent" type="checkbox"> Согласен на обработку персональных данных</label>
-          <div class="note">Данные нужны для выдачи приза и связи с вами.</div>
-
-          <div style="margin-top:12px; text-align:right;">
-            <button id="startBtn" class="btn brand">Продолжить</button>
-          </div>
-          <div id="regErr" style="color:#ff8a8a; margin-top:6px;"></div>
-        </div>
-
-        <!-- Боковая панель с призами -->
-        <div class="prizes">
-          <h3>Призы и очки</h3>
-          <div class="prize-row"><div class="p-points">20–30</div><div class="p-name">Брелок</div></div>
-          <div class="prize-row"><div class="p-points">30–50</div><div class="p-name">Блокнот и ручка</div></div>
-          <div class="prize-row"><div class="p-points">50–70</div><div class="p-name">Шоппер</div></div>
-          <div class="prize-row"><div class="p-points">70+</div><div class="p-name">Термос</div></div>
-          <div style="margin-top:8px" class="note">Очки — лучший результат за 2 минуты.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Результаты -->
-  <div id="resultOverlay" class="overlay">
-    <div class="panel">
-      <div class="center">
-        <h2 style="margin:4px 0 10px">Сессия завершена</h2>
-        <p>Ваш лучший результат: <b id="finalBest">0</b> очков.</p>
-        <p>Вы выиграли: <b id="prizeText">—</b></p>
-        <p style="margin-top:8px">Пожалуйста, обратитесь к администратору для получения приза.</p>
-        <div style="margin-top:12px;text-align:right;">
-          <button id="resultOk" class="btn brand">Новая регистрация</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- необязательная подсказка -->
+  <div id="rotateHint" class="rotate-hint">Поверните устройство для лучшего опыта</div>
 
 <script>
 (function(){
-  // Telegram полноэкранный режим
+  // ===== Telegram: полноэкран + цвета =====
   try{
     if (window.Telegram && window.Telegram.WebApp) {
       Telegram.WebApp.expand();
@@ -178,57 +197,53 @@
     }
   }catch(e){}
 
-  // ====== ФИКС ВЫСОТЫ ЭКРАНА С КЛАВИАТУРОЙ ======
-  let keyboardOpen = false;
-  function setAppHeight(h){
-    document.documentElement.style.setProperty('--app-height', h + 'px');
-  }
-  function applyViewportHeight(){
+  // ===== Реальная высота экрана (учитываем клавиатуру/вебвью) =====
+  function setAppHeight(){
     const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    setAppHeight(vh);
+    document.documentElement.style.setProperty('--app-height', vh + 'px');
   }
-  applyViewportHeight();
-  window.addEventListener('resize', applyViewportHeight);
+  setAppHeight();
+  window.addEventListener('resize', setAppHeight);
   if (window.visualViewport){
-    window.visualViewport.addEventListener('resize', ()=>{
-      const base = window.innerHeight || document.documentElement.clientHeight;
-      const vv = window.visualViewport.height;
-      // если высота заметно меньше базовой — считаем, что клавиатура открыта
-      const wasOpen = keyboardOpen;
-      keyboardOpen = vv < base * 0.85;
-      document.body.classList.toggle('kb-open', keyboardOpen);
-      applyViewportHeight();
-      // при открытии клавиатуры не ресайзим канвас (оставим как было)
-      if (!wasOpen && keyboardOpen) lockCanvasSize();
-      if (wasOpen && !keyboardOpen) { unlockCanvasSize(); resizeCanvas(); }
-    }, {passive:true});
+    window.visualViewport.addEventListener('resize', setAppHeight, {passive:true});
   }
 
-  // ====== КАНВАС ======
+  // ===== «Виртуальный альбомный режим» в портрете =====
+  const root = document.documentElement;
+  const rotateHint = document.getElementById('rotateHint');
+
+  function applyOrientationMode(){
+    const portrait = (window.innerHeight > window.innerWidth);
+    if (portrait){
+      root.classList.add('portrait-force-landscape');
+      // при желании можно показывать подсказку:
+      // rotateHint.classList.add('show');
+    } else {
+      root.classList.remove('portrait-force-landscape');
+      rotateHint.classList.remove('show');
+    }
+    // подстроить канвас под новый layout
+    if (typeof resizeCanvas === 'function'){
+      setTimeout(resizeCanvas, 50);
+    }
+  }
+  window.addEventListener('orientationchange', applyOrientationMode);
+  window.addEventListener('resize', applyOrientationMode);
+  applyOrientationMode();
+
+  // ===== ИГРА =====
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
+
   let W = canvas.width, H = canvas.height;
-  let lockedSize = null;
+  let GROUND_Y = H - 32;
 
-  function lockCanvasSize(){
-    // фиксируем текущие CSS размеры, чтобы канвас не прыгал
-    lockedSize = {
-      w: canvas.getBoundingClientRect().width,
-      h: canvas.getBoundingClientRect().height,
-      cssW: canvas.style.width,
-      cssH: canvas.style.height,
-      width: canvas.width,
-      height: canvas.height
-    };
-  }
-  function unlockCanvasSize(){ lockedSize = null; }
-
+  // вместо innerWidth/innerHeight — размеры контейнера (устойчиво при повороте)
   function resizeCanvas() {
-    if (lockedSize) return; // пока клавиатура открыта — не менять размеры
-    const vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-    const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
-    const cssW = vw;
-    const cssH = Math.max(240, Math.round(vh * 0.6));
+    const container = canvas.parentElement; // .gameBox
+    const rect = container.getBoundingClientRect();
+    const cssW = Math.max(320, Math.floor(rect.width));
+    const cssH = Math.max(220, Math.floor(rect.height * 0.75)); // ~75% высоты блока под канвас
 
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     canvas.style.width  = cssW + 'px';
@@ -239,24 +254,22 @@
 
     W = cssW; H = cssH; GROUND_Y = H - 32;
   }
+
   window.addEventListener('resize', resizeCanvas);
 
-  // ====== ПАРАМЕТРЫ ИГРЫ ======
-  let GROUND_Y = H - 32;
+  // Параметры игры
   const GRAVITY = 0.65;
   const JUMP_VELOCITY = -12.2;
-
-  // плавный рост скорости по времени
   const SPEED_START = 5;
-  const SPEED_ACCEL = 0.02; // px/s
-  let worldSpeed = SPEED_START;
-
+  const SPEED_ACCEL = 0.02; // px/s — плавный рост
   const SPAWN_MIN = 180, SPAWN_VAR = 180;
 
+  let worldSpeed = SPEED_START;
   let score = 0, best = 0, gameOver = false, ready = false, runStart = Date.now();
 
   const player = { x: 50, y: GROUND_Y - 20, w: 20, h: 20, vy: 0, onGround: true, jumpCount: 0, maxJumps: 2 };
 
+  // Спрайты препятствий
   const obstacleSprites = [];
   function loadSprite(path){
     const img = new Image();
@@ -269,7 +282,7 @@
   obstacleSprites.push(loadSprite("assets/obstacle2.png"));
   obstacleSprites.push(loadSprite("assets/obstacle3.png"));
   obstacleSprites.push(loadSprite("assets/obstacle4.png")); // широкий
-  obstacleSprites.push(loadSprite("assets/obstacle5.png")); // летающий
+  obstacleSprites.push(loadSprite("assets/obstacle5.png")); // летающий (если будет использоваться)
 
   const obstacles = []; let spawnTimer = 0;
 
@@ -280,14 +293,15 @@
     obstacles.length = 0; spawnTimer = 0; loop();
   }
 
+  // Базовый спавн (летающее без рандомной высоты — как ты просил сейчас)
   function spawnObstacle(){
-    const types = [0,1,2];
+    const types = [0,1,2]; // 0 — базовый 32x32, 1 — широкий 64x32, 2 — «летающий» 20x20 (фикс. высота)
     const type = types[Math.floor(Math.random()*types.length)];
     let w=32, h=32, y=GROUND_Y-32, spriteIndex=0;
 
-    if (type === 0){ w=32; h=32; y=GROUND_Y-h; spriteIndex = 0; }
-    else if (type === 1){ w=64; h=32; y=GROUND_Y-h; spriteIndex = 3; }
-    else if (type === 2){ w=20; h=20; y=GROUND_Y - Math.max(70, Math.min(140, H*0.25)); spriteIndex = 4; }
+    if (type === 0){ w=32; h=32; y=GROUND_Y-h; spriteIndex=0; }
+    else if (type === 1){ w=64; h=32; y=GROUND_Y-h; spriteIndex=3; }
+    else if (type === 2){ w=20; h=20; y=GROUND_Y - 90; spriteIndex=4; }
 
     const sprite = obstacleSprites[spriteIndex] || null;
     obstacles.push({ x: W + 10, y, w, h, type, passed: false, sprite });
@@ -323,11 +337,11 @@
     const elapsedSec = (Date.now() - runStart) / 1000;
     worldSpeed = SPEED_START + SPEED_ACCEL * elapsedSec;
 
-    // спавн
+    // спавн препятствий
     spawnTimer -= worldSpeed;
     if (spawnTimer <= 0) { spawnObstacle(); spawnTimer = SPAWN_MIN + Math.random()*SPAWN_VAR; }
 
-    // игрок
+    // физика игрока
     player.vy += GRAVITY; player.y += player.vy;
     if (player.y >= GROUND_Y - player.h){
       player.y = GROUND_Y - player.h; player.vy = 0;
@@ -345,8 +359,7 @@
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(o.sprite, o.x, o.y, o.w, o.h);
       } else {
-        ctx.fillStyle = '#17F1E9';
-        ctx.fillRect(o.x, o.y, o.w, o.h);
+        ctx.fillStyle = '#17F1E9'; ctx.fillRect(o.x, o.y, o.w, o.h);
       }
 
       if (o.x + o.w < 0) obstacles.splice(i,1);
@@ -356,7 +369,7 @@
       }
     }
 
-    // игрок
+    // игрок (замени на drawPlayer(), если используешь спрайты персонажа)
     ctx.fillStyle = gameOver ? '#f33' : '#0f0';
     ctx.fillRect(player.x, player.y, player.w, player.h);
 
@@ -371,7 +384,7 @@
     return a.x < bx + bw && a.x + a.w > bx && a.y < by + bh && a.y + a.h > by;
   }
 
-  // ====== HUD / кнопки ======
+  // ===== HUD / кнопки =====
   const scoreEl = document.getElementById('score');
   const bestEl  = document.getElementById('best');
   const timeEl  = document.getElementById('timeLeft');
@@ -384,7 +397,7 @@
 
   function updateHud(){ scoreEl.textContent = String(score); bestEl.textContent = String(best); }
 
-  // ====== Регистрация / 2-минутная сессия ======
+  // ===== Регистрация / 2-минутная сессия =====
   const regOverlay = document.getElementById('regOverlay');
   const resultOverlay = document.getElementById('resultOverlay');
   const startBtn = document.getElementById('startBtn');
@@ -405,7 +418,7 @@
   function closeReg(){ regOverlay.style.display='none'; }
 
   function isEmailValid(v){
-    if (!v) return true; // e-mail не обязателен, но если указан — проверяем
+    if (!v) return true; // e-mail не обязателен
     return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
   }
 
@@ -461,7 +474,7 @@
     return '—';
   }
 
-  // ====== UX: 3-2-1 перед стартом/рестартом ======
+  // 3-2-1 перед стартом
   function startCountdown(cb){
     ready = false;
     let t = 3;
@@ -485,8 +498,9 @@
 
   // старт
   resizeCanvas();
-  openReg();
-  updateHud();
+  // можно сразу открыть регистрацию или оставить скрытой — на ваш выбор
+  // openReg();
+  document.getElementById('regOverlay').style.display = 'flex';
   (function first(){
     ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
     const g=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y); g.addColorStop(0,'#17F1E9'); g.addColorStop(1,'#00C1C4');
