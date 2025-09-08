@@ -15,7 +15,6 @@
     *{ box-sizing:border-box; }
     html,body{ height:100%; margin:0; font-family:monospace; background:var(--bg); color:var(--text); }
 
-    /* корень, который «поворачиваем» в портрете */
     #app-root{ position:relative; width:100%; min-height:var(--app-height); display:flex; }
     .portrait-force-landscape #app-root{
       position:fixed; inset:0; transform:rotate(90deg); transform-origin:top left;
@@ -32,11 +31,10 @@
     canvas{ display:block; width:100%; height:auto; background:#111; image-rendering:pixelated; }
     .bar{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; padding:8px var(--pad); flex-wrap:wrap; }
     .hint{ font-size:12px; color:var(--muted); }
-    .btn{ background:#101010; color:var(--text); border:2px solid var(--brand); padding:8px 12px; cursor:pointer; border-radius:8px; }
+    .btn{ background:#101010; color:#d9fff9; border:2px solid var(--brand); padding:8px 12px; cursor:pointer; border-radius:8px; }
     .btn:active{ background:var(--brand); color:#001314; }
     .btn.brand{ background:linear-gradient(0.125turn, var(--brand) 0%, var(--brand-2) 100%); color:#001314; border-color:transparent; }
 
-    /* оверлеи */
     .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.9); display:none;
       align-items:center; justify-content:center; padding:16px; z-index:999; height:var(--app-height); }
     .panel{ background:#0e0e0e; border:3px solid var(--brand); border-radius:10px;
@@ -143,16 +141,18 @@
 
 <script>
 (function(){
-  /* === Telegram fullscreen === */
-  try{ if (window.Telegram?.WebApp){
-    Telegram.WebApp.expand();
-    Telegram.WebApp.setBackgroundColor("#000000");
-    Telegram.WebApp.setHeaderColor("secondary_bg_color");
-  }}catch(e){}
+  /* === Telegram fullscreen (без optional chaining) === */
+  try{
+    if (window.Telegram && window.Telegram.WebApp){
+      window.Telegram.WebApp.expand();
+      window.Telegram.WebApp.setBackgroundColor("#000000");
+      window.Telegram.WebApp.setHeaderColor("secondary_bg_color");
+    }
+  }catch(e){}
 
   /* === Реальная высота экрана (фикс клавиатуры) === */
   function setAppHeight(){
-    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    var vh = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
     document.documentElement.style.setProperty('--app-height', vh + 'px');
   }
   setAppHeight();
@@ -160,12 +160,12 @@
   if (window.visualViewport){ window.visualViewport.addEventListener('resize', setAppHeight, {passive:true}); }
 
   /* === Виртуальный альбомный режим в портрете === */
-  const root = document.documentElement;
-  const rotateHint = document.getElementById('rotateHint');
+  var root = document.documentElement;
+  var rotateHint = document.getElementById('rotateHint');
   function applyOrientationMode(){
-    const portrait = (window.innerHeight > window.innerWidth);
+    var portrait = (window.innerHeight > window.innerWidth);
     if (portrait){ root.classList.add('portrait-force-landscape'); }
-    else { root.classList.remove('portrait-force-landscape'); rotateHint.classList.remove('show'); }
+    else { root.classList.remove('portrait-force-landscape'); rotateHint && rotateHint.classList.remove('show'); }
     if (typeof resizeCanvas === 'function') setTimeout(resizeCanvas, 50);
   }
   window.addEventListener('orientationchange', applyOrientationMode);
@@ -173,15 +173,15 @@
   applyOrientationMode();
 
   /* === Canvas / размеры от контейнера === */
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  let W = canvas.width, H = canvas.height;
-  let GROUND_Y = H - 32;
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  var GROUND_Y = H - 32;
   function resizeCanvas(){
-    const rect = canvas.parentElement.getBoundingClientRect();
-    const cssW = Math.max(320, Math.floor(rect.width));
-    const cssH = Math.max(220, Math.floor(rect.height * 0.75));
-    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    var rect = canvas.parentElement.getBoundingClientRect();
+    var cssW = Math.max(320, Math.floor(rect.width));
+    var cssH = Math.max(220, Math.floor(rect.height * 0.75));
+    var dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     canvas.style.width = cssW+'px'; canvas.style.height = cssH+'px';
     canvas.width = Math.round(cssW*dpr); canvas.height = Math.round(cssH*dpr);
     ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -190,158 +190,151 @@
   window.addEventListener('resize', resizeCanvas);
 
   /* === Фон — бесшовный тайл === */
-  const bgTile = new Image(); bgTile.src = "assets/background.png";
-  let bgOffset = 0;
+  var bgTile = new Image(); bgTile.src = "assets/background.png";
+  var bgOffset = 0;
   function drawBackground(){
     if (!bgTile.complete){ ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H); return; }
-    const scale = H / bgTile.height;
-    const tileW = Math.ceil(bgTile.width * scale);
-    const speed = worldSpeed * 0.5;          // параллакс
+    var scale = H / bgTile.height;
+    var tileW = Math.ceil(bgTile.width * scale);
+    var speed = worldSpeed * 0.5;
     bgOffset = (bgOffset - speed);
     if (bgOffset <= -tileW) bgOffset += tileW;
-    for (let x=-tileW; x < W + tileW; x += tileW){
+    for (var x=-tileW; x < W + tileW; x += tileW){
       ctx.drawImage(bgTile, x + bgOffset, 0, tileW, H);
     }
   }
 
   /* === Декор стены (3 объекта) === */
-  function loadImg(src){ const im=new Image(); im.src=src; return im; }
-  const DECOS = [
+  function loadImg(src){ var im=new Image(); im.src=src; return im; }
+  var DECOS = [
     { img: loadImg("assets/deco_clock.png"),   w:64, h:64, weight:2 },
     { img: loadImg("assets/deco_panel.png"),   w:80, h:80, weight:3 },
     { img: loadImg("assets/deco_console.png"), w:72, h:72, weight:1 }
   ];
-  const bgDecos = []; const MAX_DECOS_ON_SCREEN = 6;
-  let decoTimer = 0, decoIntervalMin=1800, decoIntervalVar=2200;
+  var bgDecos = []; var MAX_DECOS_ON_SCREEN = 6;
+  var decoTimer = 0, decoIntervalMin=1800, decoIntervalVar=2200;
   function pickDecoByWeight(){
-    const total = DECOS.reduce((s,d)=>s+d.weight,0);
-    let r = Math.random()*total;
-    for (const d of DECOS){ r -= d.weight; if (r<=0) return d; }
+    var total = DECOS.reduce(function(s,d){return s+d.weight;},0);
+    var r = Math.random()*total;
+    for (var i=0;i<DECOS.length;i++){ r -= DECOS[i].weight; if (r<=0) return DECOS[i]; }
     return DECOS[0];
   }
-  function randomWallY(){ const top=Math.round(H*0.20), bottom=Math.round(H*0.45); return Math.floor(top + Math.random()*(bottom-top)); }
-  function scheduleNextDeco(){ decoTimer = performance.now() + decoIntervalMin + Math.random()*decoIntervalVar; }
+  function randomWallY(){ var top=Math.round(H*0.20), bottom=Math.round(H*0.45); return Math.floor(top + Math.random()*(bottom-top)); }
+  function scheduleNextDeco(){ decoTimer = (window.performance && performance.now ? performance.now() : Date.now()) + decoIntervalMin + Math.random()*decoIntervalVar; }
   function updateDecoSpawner(now){
     if (bgDecos.length >= MAX_DECOS_ON_SCREEN) return;
     if (now >= decoTimer){
-      const t = pickDecoByWeight(); const scale = 0.85 + Math.random()*0.4;
+      var t = pickDecoByWeight(); var scale = 0.85 + Math.random()*0.4;
       bgDecos.push({ x: W+40, y: randomWallY(), w:Math.round(t.w*scale), h:Math.round(t.h*scale), img:t.img, speed:0.6+Math.random()*0.2 });
       scheduleNextDeco();
     }
   }
   function drawDecos(){
-    for (let i=bgDecos.length-1; i>=0; i--){
-      const d = bgDecos[i]; d.x -= worldSpeed * d.speed;
-      if (d.img.complete){ ctx.imageSmoothingEnabled=false; ctx.drawImage(d.img, d.x, d.y, d.w, d.h); }
+    for (var i=bgDecos.length-1; i>=0; i--){
+      var d = bgDecos[i]; d.x -= worldSpeed * d.speed;
+      if (d.img && d.img.complete){ ctx.imageSmoothingEnabled=false; ctx.drawImage(d.img, d.x, d.y, d.w, d.h); }
       if (d.x < -d.w-20) bgDecos.splice(i,1);
     }
   }
 
   /* === Игрок (спрайты и отрисовка) === */
-  const playerSprites = {
+  var playerSprites = {
     run: [ Object.assign(new Image(),{src:"assets/player_run1.png"}),
            Object.assign(new Image(),{src:"assets/player_run2.png"}) ],
     jump: Object.assign(new Image(),{src:"assets/player_jump.png"})
   };
-  let playerAnimTime=0, playerAnimFrame=0;
+  var playerAnimTime=0, playerAnimFrame=0;
 
   /* === Параметры игры === */
-  const GRAVITY=0.65, JUMP_VELOCITY=-12.2;
-  const SPEED_START=5, SPEED_ACCEL=0.02;         // плавный рост
-  const SPAWN_MIN=180, SPAWN_VAR=180;
-  let worldSpeed=SPEED_START, score=0, best=0, gameOver=false, ready=false, runStart=Date.now();
+  var GRAVITY=0.65, JUMP_VELOCITY=-12.2;
+  var SPEED_START=5, SPEED_ACCEL=0.02;
+  var SPAWN_MIN=180, SPAWN_VAR=180;
+  var worldSpeed=SPEED_START, score=0, best=0, gameOver=false, ready=false, runStart=Date.now();
 
-  const player = { x:50, y:GROUND_Y-56, w:56, h:56, vy:0, onGround:true, jumpCount:0, maxJumps:2 };
+  var player = { x:50, y:GROUND_Y-56, w:56, h:56, vy:0, onGround:true, jumpCount:0, maxJumps:2 };
 
   function drawPlayer(){
-    const inAir = !player.onGround;
+    var inAir = !player.onGround;
     if (inAir){
-      const img = playerSprites.jump;
-      if (img.complete) ctx.drawImage(img, player.x, player.y, player.w, player.h);
+      var imgJ = playerSprites.jump;
+      if (imgJ && imgJ.complete) ctx.drawImage(imgJ, player.x, player.y, player.w, player.h);
       else { ctx.fillStyle="#0f0"; ctx.fillRect(player.x, player.y, player.w, player.h); }
     } else {
       playerAnimTime += worldSpeed;
       if (playerAnimTime > 18){ playerAnimTime=0; playerAnimFrame=(playerAnimFrame+1)%2; }
-      const img = playerSprites.run[playerAnimFrame];
-      if (img.complete) ctx.drawImage(img, player.x, player.y, player.w, player.h);
+      var imgR = playerSprites.run[playerAnimFrame];
+      if (imgR && imgR.complete) ctx.drawImage(imgR, player.x, player.y, player.w, player.h);
       else { ctx.fillStyle="#0f0"; ctx.fillRect(player.x, player.y, player.w, player.h); }
     }
   }
 
   /* === Препятствия (4 вида) === */
-  const SPRITES = {
+  var SPRITES = {
     HIGH:   loadImg("assets/obstacle_high.png"),
     WIDE:   loadImg("assets/obstacle_wide.png"),
     MEDIUM: loadImg("assets/obstacle_medium.png"),
     FLY:    loadImg("assets/obstacle_fly.png")
   };
-  const obstacles=[]; let spawnTimer=0;
+  var obstacles=[]; var spawnTimer=0;
 
   function spawnObstacle(){
-    const type = Math.floor(Math.random()*4); // 0 среднее, 1 широкое, 2 высокое, 3 летающее
-    let w,h,y,sprite;
+    var type = Math.floor(Math.random()*4);
+    var w,h,y,sprite;
     if (type===0){ w=64; h=64;  sprite=SPRITES.MEDIUM; y=GROUND_Y-h; }
     else if (type===1){ w=128; h=64; sprite=SPRITES.WIDE;   y=GROUND_Y-h; }
     else if (type===2){ w=64; h=128; sprite=SPRITES.HIGH;   y=GROUND_Y-h; }
     else { w=48; h=48; sprite=SPRITES.FLY; y=GROUND_Y-90-h; if (y<16) y=16; }
-    obstacles.push({ x:W+10, y, w, h, sprite, passed:false });
+    obstacles.push({ x:W+10, y:y, w:w, h:h, sprite:sprite, passed:false });
   }
 
   function jump(){
     if (gameOver || !sessionActive() || !ready) return;
     if (player.jumpCount < player.maxJumps){ player.vy=JUMP_VELOCITY; player.onGround=false; player.jumpCount++; }
   }
-  window.addEventListener('keydown', e=>{
+  window.addEventListener('keydown', function(e){
     if (e.code==='Space' || e.code==='ArrowUp'){ e.preventDefault(); jump(); }
-    if (e.code==='Enter' && (gameOver || !sessionActive())) startCountdown(()=>resetRun());
+    if (e.code==='Enter' && (gameOver || !sessionActive())) startCountdown(function(){ resetRun(); });
   });
   canvas.addEventListener('pointerdown', jump);
 
-  let rafId=null; function loop(){ cancelAnimationFrame(rafId); rafId=requestAnimationFrame(update); }
+  var rafId=null; function loop(){ if (rafId) cancelAnimationFrame(rafId); rafId=requestAnimationFrame(update); }
 
   function update(){
-    /* фон и декор */
     drawBackground();
-    updateDecoSpawner(performance.now());
+    updateDecoSpawner((window.performance && performance.now ? performance.now() : Date.now()));
     drawDecos();
 
-    /* земля */
-    const grd = ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);
+    var grd = ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);
     grd.addColorStop(0,"#17F1E9"); grd.addColorStop(1,"#00C1C4");
     ctx.fillStyle = grd; ctx.fillRect(0,GROUND_Y,W,2);
 
     if (!sessionActive()){ dimOverlay('Сессия завершена'); return; }
 
-    /* плавный рост скорости */
-    const elapsedSec = (Date.now() - runStart)/1000;
+    var elapsedSec = (Date.now() - runStart)/1000;
     worldSpeed = SPEED_START + SPEED_ACCEL*elapsedSec;
 
-    /* спавн препятствий */
     spawnTimer -= worldSpeed;
     if (spawnTimer <= 0){ spawnObstacle(); spawnTimer = SPAWN_MIN + Math.random()*SPAWN_VAR; }
 
-    /* физика игрока */
     player.vy += GRAVITY; player.y += player.vy;
     if (player.y >= GROUND_Y - player.h){
       player.y = GROUND_Y - player.h; player.vy = 0;
       if (!player.onGround){ player.onGround = true; player.jumpCount = 0; }
     } else { player.onGround = false; }
 
-    /* препятствия */
-    for (let i=obstacles.length-1;i>=0;i--){
-      const o = obstacles[i]; o.x -= worldSpeed;
+    for (var i=obstacles.length-1;i>=0;i--){
+      var o = obstacles[i]; o.x -= worldSpeed;
 
-      if (o.sprite?.complete){ ctx.imageSmoothingEnabled=false; ctx.drawImage(o.sprite, o.x, o.y, o.w, o.h); }
+      if (o.sprite && o.sprite.complete){ ctx.imageSmoothingEnabled=false; ctx.drawImage(o.sprite, o.x, o.y, o.w, o.h); }
       else { ctx.fillStyle='#17F1E9'; ctx.fillRect(o.x,o.y,o.w,o.h); }
 
       if (o.x + o.w < 0) obstacles.splice(i,1);
       if (!o.passed && o.x + o.w < player.x){ o.passed=true; score++; updateHud(); }
-      if (!gameOver && collideForgiven(player,o,4)){ // чуть больше «прощения»
+      if (!gameOver && collideForgiven(player,o,4)){
         gameOver = true; if (score > best){ best = score; updateHud(); }
       }
     }
 
-    /* игрок */
     drawPlayer();
 
     if (!ready){ drawCountdown(); return; }
@@ -351,77 +344,81 @@
   }
 
   function collideForgiven(a,b,f){
-    const bx=b.x+f, by=b.y+f, bw=b.w-2*f, bh=b.h-2*f;
+    var bx=b.x+f, by=b.y+f, bw=b.w-2*f, bh=b.h-2*f;
     return a.x < bx + bw && a.x + a.w > bx && a.y < by + bh && a.y + a.h > by;
   }
 
   /* === HUD / кнопки === */
-  const scoreEl = document.getElementById('score');
-  const bestEl  = document.getElementById('best');
-  const timeEl  = document.getElementById('timeLeft');
-  document.getElementById('restart').onclick = () => { if (!sessionActive()) return; startCountdown(()=>resetRun()); };
+  var scoreEl = document.getElementById('score');
+  var bestEl  = document.getElementById('best');
+  var timeEl  = document.getElementById('timeLeft');
+  document.getElementById('restart').onclick = function(){ if (!sessionActive()) return; startCountdown(function(){ resetRun(); }); };
   document.getElementById('newSession').onclick = openReg;
   function updateHud(){ scoreEl.textContent = String(score); bestEl.textContent = String(best); }
 
   /* === Регистрация / 2-минутная сессия === */
-  const regOverlay = document.getElementById('regOverlay');
-  const resultOverlay = document.getElementById('resultOverlay');
-  const startBtn = document.getElementById('startBtn');
-  const resultOk = document.getElementById('resultOk');
-  const regErr = document.getElementById('regErr');
-  const lastNameIn = document.getElementById('lastName');
-  const firstNameIn = document.getElementById('firstName');
-  const middleNameIn = document.getElementById('middleName');
-  const phoneIn = document.getElementById('phone');
-  const emailIn = document.getElementById('email');
-  const consentIn = document.getElementById('consent');
-  const finalBest = document.getElementById('finalBest');
-  const prizeText = document.getElementById('prizeText');
+  var regOverlay = document.getElementById('regOverlay');
+  var resultOverlay = document.getElementById('resultOverlay');
+  var startBtn = document.getElementById('startBtn');
+  var resultOk = document.getElementById('resultOk');
+  var regErr = document.getElementById('regErr');
+  var lastNameIn = document.getElementById('lastName');
+  var firstNameIn = document.getElementById('firstName');
+  var middleNameIn = document.getElementById('middleName');
+  var phoneIn = document.getElementById('phone');
+  var emailIn = document.getElementById('email');
+  var consentIn = document.getElementById('consent');
+  var finalBest = document.getElementById('finalBest');
+  var prizeText = document.getElementById('prizeText');
 
-  let profile = null, sessionEndAt = null, timerId = null;
+  var profile = null, sessionEndAt = null, timerId = null;
 
   function openReg(){ regErr.textContent=''; regOverlay.style.display='flex'; }
   function closeReg(){ regOverlay.style.display='none'; }
 
   function isEmailValid(v){ if (!v) return true; return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()); }
 
-  startBtn.onclick = () => {
-    const lastName = lastNameIn.value.trim();
-    const firstName = firstNameIn.value.trim();
-    const middleName = middleNameIn.value.trim();
-    const phone = phoneIn.value.trim();
-    const email = emailIn.value.trim();
+  startBtn.onclick = function(){
+    var lastName = lastNameIn.value.trim();
+    var firstName = firstNameIn.value.trim();
+    var middleName = middleNameIn.value.trim();
+    var phone = phoneIn.value.trim();
+    var email = emailIn.value.trim();
 
     if (!lastName){ regErr.textContent = 'Укажите фамилию'; return; }
     if (!firstName){ regErr.textContent = 'Укажите имя'; return; }
     if (!consentIn.checked) { regErr.textContent = 'Нужно согласие на обработку персональных данных'; return; }
     if (!isEmailValid(email)) { regErr.textContent = 'Некорректный e-mail'; return; }
 
-    profile = { lastName, firstName, middleName, phone, email };
+    profile = { lastName:lastName, firstName:firstName, middleName:middleName, phone:phone, email:email };
     best = 0; score = 0; updateHud();
     sessionEndAt = Date.now() + 2*60*1000; // 2 минуты
     closeReg();
-    startCountdown(()=>resetRun());
+    startCountdown(function(){ resetRun(); });
     tickTimer();
   };
 
-  resultOk.onclick = () => { resultOverlay.style.display='none'; openReg(); };
+  resultOk.onclick = function(){ resultOverlay.style.display='none'; openReg(); };
 
   function tickTimer(){
     clearInterval(timerId);
-    timerId = setInterval(()=>{
-      const left = Math.max(0, (sessionEndAt || 0) - Date.now());
+    timerId = setInterval(function(){
+      var left = Math.max(0, (sessionEndAt || 0) - Date.now());
       timeEl.textContent = fmt(left);
       if (left <= 0){ clearInterval(timerId); showResults(); }
     }, 200);
   }
-  function fmt(ms){ const s=Math.ceil(ms/1000), m=Math.floor(s/60), ss=String(s%60).padStart(2,'0'); return `${String(m).padStart(2,'0')}:${ss}`; }
+  function fmt(ms){ var s=Math.ceil(ms/1000), m=Math.floor(s/60), ss=('0'+(s%60)).slice(-2); return ('0'+m).slice(-2)+':'+ss; }
   function sessionActive(){ return sessionEndAt && Date.now() < sessionEndAt; }
 
   function showResults(){
     finalBest.textContent = String(best);
     prizeText.textContent = getPrize(best);
-    try{ if (window.Telegram?.WebApp){ Telegram.WebApp.sendData(JSON.stringify({ type:'session_result', profile, best })); } }catch(e){}
+    try{
+      if (window.Telegram && window.Telegram.WebApp){
+        window.Telegram.WebApp.sendData(JSON.stringify({ type:'session_result', profile:profile, best:best }));
+      }
+    }catch(e){}
     resultOverlay.style.display='flex';
   }
   function getPrize(p){
@@ -435,18 +432,18 @@
   /* === 3-2-1 перед стартом === */
   function startCountdown(cb){
     ready = false;
-    let t = 3;
-    const step = ()=>{
+    var t = 3;
+    function step(){
       drawCountdown(t);
-      if (t === 0){ ready = true; cb && cb(); }
-      else setTimeout(()=>{ t--; step(); }, 500);
-    };
+      if (t === 0){ ready = true; if (cb) cb(); }
+      else setTimeout(function(){ t--; step(); }, 500);
+    }
     step();
   }
   function drawCountdown(n){
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0,0,W,H);
     ctx.font = 'bold 56px monospace'; ctx.textAlign='center'; ctx.fillStyle = '#17F1E9';
-    ctx.fillText(n ?? ' ', W/2, H/2);
+    ctx.fillText((typeof n==='number')? n : ' ', W/2, H/2);
   }
   function dimOverlay(msg){
     ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(0,0,W,H);
@@ -454,12 +451,19 @@
     ctx.fillText(msg, W/2, H/2);
   }
 
-  /* === Старт === */
+  /* === стартовое состояние === */
+  function resetRun(){
+    runStart = Date.now();
+    worldSpeed = SPEED_START; score = 0; gameOver = false;
+    player.y = GROUND_Y - player.h; player.vy = 0; player.onGround = true; player.jumpCount = 0;
+    obstacles.length = 0; spawnTimer = 0; loop();
+  }
+
   resizeCanvas();
   document.getElementById('regOverlay').style.display = 'flex';
   (function first(){
     ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
-    const g=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);
+    var g=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);
     g.addColorStop(0,'#17F1E9'); g.addColorStop(1,'#00C1C4');
     ctx.fillStyle=g; ctx.fillRect(0,GROUND_Y,W,2);
   })();
