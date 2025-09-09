@@ -5,16 +5,24 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
   <title>ПрофТрейдЛаб — 8-bit Runner</title>
-  <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="%2317F1E9"/><text x="50" y="70" text-anchor="middle" font-size="70" fill="black">🧪</text></svg>'>
+  <!-- Фавикон с фирменной бирюзой #53B5AF -->
+  <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="%2353B5AF"/><text x="50" y="70" text-anchor="middle" font-size="70" fill="black">🧪</text></svg>'>
   <style>
     :root{
-      --brand:#17F1E9; --brand-2:#00C1C4;
-      --bg:#000; --card:#0b0b0b; --text:#d9fff9; --muted:#9beee7;
-      --pad:12px; --app-height:100vh;
+      /* Брендовая палитра */
+      --brand:#53B5AF;            /* бирюзовый (83,181,175) */
+      --brand-2:#53B5AF;          /* без градиентов — та же бирюза */
+      --bg:#000000;               /* чёрный */
+      --card:#000000;             /* чёрный фон карточек */
+      --text:#ffffff;             /* белый текст */
+      --muted:#cfe9e7;            /* светло-бирюзовый для подсказок */
+      --pad:12px;
+      --app-height:100vh;
     }
     *{ box-sizing:border-box; }
     html,body{ height:100%; margin:0; font-family:monospace; background:var(--bg); color:var(--text); }
 
+    /* корень, который «поворачиваем» в портрете */
     #app-root{ position:relative; width:100%; min-height:var(--app-height); display:flex; }
     .portrait-force-landscape #app-root{
       position:fixed; inset:0; transform:rotate(90deg); transform-origin:top left;
@@ -22,39 +30,59 @@
     }
 
     .wrap{ flex:1; display:flex; }
-    .card{ flex:1; display:flex; flex-direction:column; background:var(--card);
-      border:3px solid var(--brand); image-rendering:pixelated; box-shadow:0 0 18px rgba(23,241,233,.45); }
-    h1{ font-size:20px; margin:0; padding:10px var(--pad); display:flex; align-items:center; gap:10px;
-        background:linear-gradient(45deg, rgba(23,241,233,.08), rgba(0,193,196,.08));
-        border-bottom:1px solid rgba(23,241,233,.35); }
+    .card{
+      flex:1; display:flex; flex-direction:column; background:var(--card);
+      border:3px solid var(--brand);
+      image-rendering:pixelated;
+      box-shadow:0 0 18px rgba(83,181,175,.35);
+    }
+    h1{
+      font-size:20px; margin:0; padding:10px var(--pad); display:flex; align-items:center; gap:10px;
+      background:linear-gradient(45deg, rgba(83,181,175,.10), rgba(83,181,175,.10));
+      border-bottom:1px solid rgba(83,181,175,.35);
+      color:var(--text);
+    }
     .gameBox{ flex:1; display:flex; flex-direction:column; min-height:0; }
-    canvas{ display:block; width:100%; height:auto; background:#111; image-rendering:pixelated; }
+    canvas{ display:block; width:100%; height:auto; background:#000000; image-rendering:pixelated; }
     .bar{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; padding:8px var(--pad); flex-wrap:wrap; }
     .hint{ font-size:12px; color:var(--muted); }
-    .btn{ background:#101010; color:#d9fff9; border:2px solid var(--brand); padding:8px 12px; cursor:pointer; border-radius:8px; }
-    .btn:active{ background:var(--brand); color:#001314; }
-    .btn.brand{ background:linear-gradient(0.125turn, var(--brand) 0%, var(--brand-2) 100%); color:#001314; border-color:transparent; }
+    .btn{
+      background:#000000; color:var(--text); border:2px solid var(--brand);
+      padding:8px 12px; cursor:pointer; border-radius:8px;
+    }
+    .btn:active{ background:var(--brand); color:#000000; }
+    .btn.brand{ background:var(--brand); color:#000000; border-color:transparent; }
 
-    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.9); display:none;
-      align-items:center; justify-content:center; padding:16px; z-index:999; height:var(--app-height); }
-    .panel{ background:#0e0e0e; border:3px solid var(--brand); border-radius:10px;
-      box-shadow:0 0 18px rgba(23,241,233,.45); width:100%; max-width:860px;
-      max-height:calc(var(--app-height) - 32px); display:flex; flex-direction:column; }
+    /* оверлеи */
+    .overlay{
+      position:fixed; inset:0; background:rgba(0,0,0,.92); display:none;
+      align-items:center; justify-content:center; padding:16px; z-index:999; height:var(--app-height);
+    }
+    .panel{
+      background:#000000; border:3px solid var(--brand); border-radius:10px;
+      box-shadow:0 0 18px rgba(83,181,175,.35);
+      width:100%; max-width:860px; max-height:calc(var(--app-height) - 32px);
+      display:flex; flex-direction:column;
+    }
     .panel .inner{ display:grid; gap:14px; padding:16px; grid-template-columns:1fr 320px; overflow:auto; }
     @media (max-width:740px){ .panel .inner{ grid-template-columns:1fr; } }
     input[type="text"],input[type="tel"],input[type="email"]{
-      width:100%; background:#000; border:2px solid var(--brand); color:#cffff8; padding:8px; border-radius:6px; margin-top:4px;
+      width:100%; background:#000000; border:2px solid var(--brand); color:#ffffff; padding:8px; border-radius:6px; margin-top:4px;
     }
     .field{ margin:6px 0; }
-    .checkbox{ display:flex; gap:8px; align-items:flex-start; font-size:12px; color:#bffff6; }
-    .note{ font-size:11px; color:#9beee7; }
-    .prizes{ border:2px solid var(--brand); border-radius:8px; padding:10px; background:#0a0a0a; }
-    .prizes h3{ margin:0 0 8px; font-size:16px; }
-    .prize-row{ display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px dashed rgba(23,241,233,.45); }
+    .checkbox{ display:flex; gap:8px; align-items:flex-start; font-size:12px; color:#e9f7f6; }
+    .note{ font-size:11px; color:#cfe9e7; }
+    .prizes{ border:2px solid var(--brand); border-radius:8px; padding:10px; background:#000000; }
+    .prizes h3{ margin:0 0 8px; font-size:16px; color:#ffffff; }
+    .prize-row{ display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px dashed rgba(83,181,175,.45); }
     .prize-row:last-child{ border-bottom:none; }
 
-    .rotate-hint{ position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.8); color:#d9fff9; z-index:10000; text-align:center; padding:16px; border:3px solid #17F1E9; }
+    /* оверлей-подсказка про поворот */
+    .rotate-hint{
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.9); color:#ffffff; z-index:10000; text-align:center; padding:16px;
+      border:3px solid var(--brand);
+    }
     .rotate-hint.show{ display:flex; }
   </style>
 </head>
@@ -137,7 +165,13 @@
     </div>
   </div>
 
-  <div id="rotateHint" class="rotate-hint">Поверните устройство для лучшего опыта</div>
+  <!-- Сообщение про поворот устройства -->
+  <div id="rotateHint" class="rotate-hint">
+    <div>
+      <div style="font-size:18px; margin-bottom:8px;">Поверните устройство в альбомную ориентацию</div>
+      <div style="font-size:12px; color:#cfe9e7;">Для лучшего опыта игра автоматически развёрнута под горизонтальный режим.</div>
+    </div>
+  </div>
 
 <script>
 (function(){
@@ -159,13 +193,18 @@
   window.addEventListener('resize', setAppHeight);
   if (window.visualViewport){ window.visualViewport.addEventListener('resize', setAppHeight, {passive:true}); }
 
-  /* === Виртуальный альбомный режим в портрете === */
+  /* === Виртуальный альбомный режим в портрете + подсказка === */
   var root = document.documentElement;
   var rotateHint = document.getElementById('rotateHint');
   function applyOrientationMode(){
     var portrait = (window.innerHeight > window.innerWidth);
-    if (portrait){ root.classList.add('portrait-force-landscape'); }
-    else { root.classList.remove('portrait-force-landscape'); rotateHint && rotateHint.classList.remove('show'); }
+    if (portrait){
+      root.classList.add('portrait-force-landscape');
+      if (rotateHint) rotateHint.classList.add('show');   // показываем
+    } else {
+      root.classList.remove('portrait-force-landscape');
+      if (rotateHint) rotateHint.classList.remove('show'); // скрываем
+    }
     if (typeof resizeCanvas === 'function') setTimeout(resizeCanvas, 50);
   }
   window.addEventListener('orientationchange', applyOrientationMode);
@@ -189,14 +228,14 @@
   }
   window.addEventListener('resize', resizeCanvas);
 
-  /* === Фон — бесшовный тайл === */
+  /* === Фон — бесшовный тайл (прокрутка) === */
   var bgTile = new Image(); bgTile.src = "assets/background.png";
   var bgOffset = 0;
   function drawBackground(){
-    if (!bgTile.complete){ ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H); return; }
+    if (!bgTile.complete){ ctx.fillStyle="#000000"; ctx.fillRect(0,0,W,H); return; }
     var scale = H / bgTile.height;
     var tileW = Math.ceil(bgTile.width * scale);
-    var speed = worldSpeed * 0.5;
+    var speed = worldSpeed * 0.5;          // параллакс
     bgOffset = (bgOffset - speed);
     if (bgOffset <= -tileW) bgOffset += tileW;
     for (var x=-tileW; x < W + tileW; x += tileW){
@@ -204,7 +243,7 @@
     }
   }
 
-  /* === Декор стены (3 объекта) === */
+  /* === Декор стены (3 объекта), скорость как у фона === */
   function loadImg(src){ var im=new Image(); im.src=src; return im; }
   var DECOS = [
     { img: loadImg("assets/deco_clock.png"),   w:64, h:64, weight:2 },
@@ -225,13 +264,14 @@
     if (bgDecos.length >= MAX_DECOS_ON_SCREEN) return;
     if (now >= decoTimer){
       var t = pickDecoByWeight(); var scale = 0.85 + Math.random()*0.4;
-      bgDecos.push({ x: W+40, y: randomWallY(), w:Math.round(t.w*scale), h:Math.round(t.h*scale), img:t.img, speed:0.6+Math.random()*0.2 });
+      bgDecos.push({ x: W+40, y: randomWallY(), w:Math.round(t.w*scale), h:Math.round(t.h*scale), img:t.img });
       scheduleNextDeco();
     }
   }
   function drawDecos(){
+    var bgSpeed = worldSpeed * 0.5; // ровно как фон
     for (var i=bgDecos.length-1; i>=0; i--){
-      var d = bgDecos[i]; d.x -= worldSpeed * d.speed;
+      var d = bgDecos[i]; d.x -= bgSpeed;
       if (d.img && d.img.complete){ ctx.imageSmoothingEnabled=false; ctx.drawImage(d.img, d.x, d.y, d.w, d.h); }
       if (d.x < -d.w-20) bgDecos.splice(i,1);
     }
@@ -247,9 +287,10 @@
 
   /* === Параметры игры === */
   var GRAVITY=0.65, JUMP_VELOCITY=-12.2;
-  var SPEED_START=5, SPEED_ACCEL=0.02;
-  var SPAWN_MIN=180, SPAWN_VAR=180;
+  var SPEED_START=5, SPEED_ACCEL=0.02;                 // плавное ускорение
+  var SPAWN_MIN=320, SPAWN_VAR=260;                    // РЕЖЕ СПАВН (больше воздуха)
   var worldSpeed=SPEED_START, score=0, best=0, gameOver=false, ready=false, runStart=Date.now();
+  var rafId=null;
 
   var player = { x:50, y:GROUND_Y-56, w:56, h:56, vy:0, onGround:true, jumpCount:0, maxJumps:2 };
 
@@ -258,32 +299,32 @@
     if (inAir){
       var imgJ = playerSprites.jump;
       if (imgJ && imgJ.complete) ctx.drawImage(imgJ, player.x, player.y, player.w, player.h);
-      else { ctx.fillStyle="#0f0"; ctx.fillRect(player.x, player.y, player.w, player.h); }
+      else { ctx.fillStyle="#ffffff"; ctx.fillRect(player.x, player.y, player.w, player.h); }
     } else {
       playerAnimTime += worldSpeed;
       if (playerAnimTime > 18){ playerAnimTime=0; playerAnimFrame=(playerAnimFrame+1)%2; }
       var imgR = playerSprites.run[playerAnimFrame];
       if (imgR && imgR.complete) ctx.drawImage(imgR, player.x, player.y, player.w, player.h);
-      else { ctx.fillStyle="#0f0"; ctx.fillRect(player.x, player.y, player.w, player.h); }
+      else { ctx.fillStyle="#ffffff"; ctx.fillRect(player.x, player.y, player.w, player.h); }
     }
   }
 
-  /* === Препятствия (4 вида) === */
+  /* === Препятствия (4 вида) — уменьшены размеры === */
   var SPRITES = {
     HIGH:   loadImg("assets/obstacle_high.png"),
     WIDE:   loadImg("assets/obstacle_wide.png"),
     MEDIUM: loadImg("assets/obstacle_medium.png"),
-    FLY:    loadImg("assets/obstacle_fly.png")
+    FLY:    loadImg("assets/obstacle_fly.png") // сюда можно положить «самолёт»
   };
   var obstacles=[]; var spawnTimer=0;
 
   function spawnObstacle(){
-    var type = Math.floor(Math.random()*4);
+    var type = Math.floor(Math.random()*4); // 0 среднее, 1 широкое, 2 высокое, 3 летающее
     var w,h,y,sprite;
-    if (type===0){ w=64; h=64;  sprite=SPRITES.MEDIUM; y=GROUND_Y-h; }
-    else if (type===1){ w=128; h=64; sprite=SPRITES.WIDE;   y=GROUND_Y-h; }
-    else if (type===2){ w=64; h=128; sprite=SPRITES.HIGH;   y=GROUND_Y-h; }
-    else { w=48; h=48; sprite=SPRITES.FLY; y=GROUND_Y-90-h; if (y<16) y=16; }
+    if (type===0){ w=56; h=56;  sprite=SPRITES.MEDIUM; y=GROUND_Y-h; }      // было 64x64
+    else if (type===1){ w=96; h=56; sprite=SPRITES.WIDE;   y=GROUND_Y-h; }   // было 128x64
+    else if (type===2){ w=56; h=112; sprite=SPRITES.HIGH;  y=GROUND_Y-h; }   // было 64x128
+    else { w=64; h=40;  sprite=SPRITES.FLY;    y=GROUND_Y-90-h; if (y<16) y=16; } // шире, ниже по высоте
     obstacles.push({ x:W+10, y:y, w:w, h:h, sprite:sprite, passed:false });
   }
 
@@ -297,44 +338,51 @@
   });
   canvas.addEventListener('pointerdown', jump);
 
-  var rafId=null; function loop(){ if (rafId) cancelAnimationFrame(rafId); rafId=requestAnimationFrame(update); }
+  function loop(){ if (rafId) cancelAnimationFrame(rafId); rafId=requestAnimationFrame(update); }
 
   function update(){
+    /* фон и декор */
     drawBackground();
     updateDecoSpawner((window.performance && performance.now ? performance.now() : Date.now()));
     drawDecos();
 
+    /* земля в фирменном цвете */
     var grd = ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);
-    grd.addColorStop(0,"#17F1E9"); grd.addColorStop(1,"#00C1C4");
+    grd.addColorStop(0,"#53B5AF"); grd.addColorStop(1,"#53B5AF");
     ctx.fillStyle = grd; ctx.fillRect(0,GROUND_Y,W,2);
 
     if (!sessionActive()){ dimOverlay('Сессия завершена'); return; }
 
+    /* плавный рост скорости */
     var elapsedSec = (Date.now() - runStart)/1000;
     worldSpeed = SPEED_START + SPEED_ACCEL*elapsedSec;
 
+    /* спавн препятствий */
     spawnTimer -= worldSpeed;
     if (spawnTimer <= 0){ spawnObstacle(); spawnTimer = SPAWN_MIN + Math.random()*SPAWN_VAR; }
 
+    /* физика игрока */
     player.vy += GRAVITY; player.y += player.vy;
     if (player.y >= GROUND_Y - player.h){
       player.y = GROUND_Y - player.h; player.vy = 0;
       if (!player.onGround){ player.onGround = true; player.jumpCount = 0; }
     } else { player.onGround = false; }
 
+    /* препятствия */
     for (var i=obstacles.length-1;i>=0;i--){
       var o = obstacles[i]; o.x -= worldSpeed;
 
       if (o.sprite && o.sprite.complete){ ctx.imageSmoothingEnabled=false; ctx.drawImage(o.sprite, o.x, o.y, o.w, o.h); }
-      else { ctx.fillStyle='#17F1E9'; ctx.fillRect(o.x,o.y,o.w,o.h); }
+      else { ctx.fillStyle='#53B5AF'; ctx.fillRect(o.x,o.y,o.w,o.h); }
 
       if (o.x + o.w < 0) obstacles.splice(i,1);
       if (!o.passed && o.x + o.w < player.x){ o.passed=true; score++; updateHud(); }
-      if (!gameOver && collideForgiven(player,o,4)){
+      if (!gameOver && collideForgiven(player,o,6)){ // мягче хитбоксы
         gameOver = true; if (score > best){ best = score; updateHud(); }
       }
     }
 
+    /* игрок */
     drawPlayer();
 
     if (!ready){ drawCountdown(); return; }
@@ -429,42 +477,66 @@
     return '—';
   }
 
-  /* === 3-2-1 перед стартом === */
+  /* === 3-2-1 перед стартом — перерисовка полного кадра === */
   function startCountdown(cb){
     ready = false;
     var t = 3;
     function step(){
       drawCountdown(t);
-      if (t === 0){ ready = true; if (cb) cb(); }
-      else setTimeout(function(){ t--; step(); }, 500);
+      if (t === 0){ ready = true; if (cb) cb(); return; }
+      setTimeout(function(){ t--; step(); }, 500);
     }
     step();
   }
   function drawCountdown(n){
+    drawBackground();
+    updateDecoSpawner((window.performance && performance.now ? performance.now() : Date.now()));
+    drawDecos();
+
+    var g=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);
+    g.addColorStop(0,'#53B5AF'); g.addColorStop(1,'#53B5AF');
+    ctx.fillStyle=g; ctx.fillRect(0,GROUND_Y,W,2);
+
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0,0,W,H);
-    ctx.font = 'bold 56px monospace'; ctx.textAlign='center'; ctx.fillStyle = '#17F1E9';
+    ctx.font = 'bold 56px monospace'; ctx.textAlign='center'; ctx.fillStyle = '#53B5AF';
     ctx.fillText((typeof n==='number')? n : ' ', W/2, H/2);
   }
   function dimOverlay(msg){
     ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(0,0,W,H);
-    ctx.font='16px monospace'; ctx.textAlign='center'; ctx.fillStyle='#d9fff9';
+    ctx.font='16px monospace'; ctx.textAlign='center'; ctx.fillStyle='#ffffff';
     ctx.fillText(msg, W/2, H/2);
   }
 
-  /* === стартовое состояние === */
+  /* === Полный сброс между попытками (исправляет «замедление») === */
   function resetRun(){
     runStart = Date.now();
-    worldSpeed = SPEED_START; score = 0; gameOver = false;
-    player.y = GROUND_Y - player.h; player.vy = 0; player.onGround = true; player.jumpCount = 0;
-    obstacles.length = 0; spawnTimer = 0; loop();
+    worldSpeed = SPEED_START;
+    score = 0;
+    gameOver = false;
+
+    player.y = GROUND_Y - player.h;
+    player.vy = 0;
+    player.onGround = true;
+    player.jumpCount = 0;
+
+    obstacles.length = 0;
+    bgDecos.length = 0;   // чистим декор
+    spawnTimer = 0;
+    bgOffset = 0;         // фон в начало
+    scheduleNextDeco();   // старт таймера декора
+
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    loop();
   }
 
+  /* === стартовое состояние === */
   resizeCanvas();
   document.getElementById('regOverlay').style.display = 'flex';
   (function first(){
-    ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#000000'; ctx.fillRect(0,0,W,H);
     var g=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);
-    g.addColorStop(0,'#17F1E9'); g.addColorStop(1,'#00C1C4');
+    g.addColorStop(0,'#53B5AF'); g.addColorStop(1,'#53B5AF');
     ctx.fillStyle=g; ctx.fillRect(0,GROUND_Y,W,2);
   })();
 })();
