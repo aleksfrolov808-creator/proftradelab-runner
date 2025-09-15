@@ -34,7 +34,10 @@
       border-bottom:1px solid rgba(83,181,175,.35); color:var(--text);
     }
     .gameBox{ flex:1; display:flex; flex-direction:column; min-height:0; }
-    canvas{ display:block; width:100%; height:auto; background:#000000; image-rendering:pixelated; }
+    canvas{
+      display:block; width:100%; height:auto; background:#000000; image-rendering:pixelated;
+      touch-action: manipulation; -webkit-user-select:none; user-select:none;
+    }
     .bar{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; padding:8px var(--pad); flex-wrap:wrap; }
     .hint{ font-size:12px; color:var(--muted); }
     .btn{ background:#000000; color:var(--text); border:2px solid var(--brand); padding:8px 12px; cursor:pointer; border-radius:8px; }
@@ -79,7 +82,7 @@
           <div class="bar">
             <div>
               Очки: <span id="score">0</span> · Рекорд: <span id="best">0</span> · Осталось: <span id="timeLeft">02:00</span>
-              <div class="hint">Управление: Space / ⬆︎ / Тап · Двойной прыжок — второй слабее и только пока летите вверх.</div>
+              <div class="hint">Управление: Space / ⬆︎ / Тап · Двойной прыжок — второй слабее и доступен в пределах ~0.35 с.</div>
             </div>
             <div style="display:flex; gap:8px;">
               <button id="restart" class="btn">Заново</button>
@@ -268,10 +271,13 @@
   };
   var playerAnimTime=0, playerAnimFrame=0;
 
-  /* Параметры игры (ускоренный старт и рост скорости ранее добавлены) */
+  /* Параметры игры */
   var GRAVITY=0.85;               // быстрое приземление
   var JUMP_VEL1=-15.9;            // ↑ было -12.2 (x1.3 по высоте)
   var JUMP_VEL2=-12.4;            // ↑ было -9.5  (x1.3 по высоте)
+  var JUMP2_WINDOW_MS=350;        // окно для второго прыжка (мс)
+  var JUMP2_MIN_UP_VY=-1.5;       // пока ещё движемся вверх (не на пике)
+
   var SPEED_START=7.0;
   var SPEED_ACCEL=0.04;
   var SPAWN_MIN=340, SPAWN_VAR=300;
@@ -297,6 +303,7 @@
   }
 
   /* Препятствия + разнообразие спавна */
+  function loadImg(src){ var im=new Image(); im.src=src; return im; }
   var SPRITES = {
     HIGH:   loadImg("assets/obstacle_high.png"),
     WIDE:   loadImg("assets/obstacle_wide.png"),
@@ -348,7 +355,7 @@
     return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
   }
 
-  /* Прыжки: второй слабее и доступен короткое окно, пока летите вверх */
+  /* Прыжки: второй слабее и в окне по времени, пока ещё движемся вверх */
   function jump(){
     if (gameOver || !sessionActive() || !ready) return;
 
@@ -361,7 +368,7 @@
     }
 
     var since = Date.now() - player.firstJumpAt;
-    if (player.jumpCount===1 && since <= 220 && player.vy < -2){
+    if (player.jumpCount===1 && since <= JUMP2_WINDOW_MS && player.vy < JUMP2_MIN_UP_VY){
       player.vy = JUMP_VEL2; // слабее, даёт высоту, а не «дальность»
       player.jumpCount = 2;
     }
