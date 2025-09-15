@@ -270,10 +270,10 @@
     jump: Object.assign(new Image(),{src:"assets/player_jump.png"})
   };
 
-  /* === НАСТРОЙКИ АНИМАЦИИ БЕГА ПО ВРЕМЕНИ === */
-  var RUN_FRAME_MS = 140;     // длительность одного кадра бега (мс)
-  var playerAnimTimerMs = 0;  // накопитель времени
-  var playerAnimFrame = 0;    // 0 или 1
+  /* === Анимация бега по реальному времени === */
+  var RUN_FRAME_MS = 140;
+  var playerAnimTimerMs = 0;
+  var playerAnimFrame = 0;
   var lastFrameTs = (window.performance && performance.now) ? performance.now() : Date.now();
 
   function drawPlayer(){
@@ -283,17 +283,14 @@
       if (imgJ && imgJ.complete) ctx.drawImage(imgJ, player.x, player.y, player.w, player.h);
       else { ctx.fillStyle="#ffffff"; ctx.fillRect(player.x, player.y, player.w, player.h); }
     } else {
-      // Переключаем кадры только по реальному времени, а не по скорости мира
       var now = (window.performance && performance.now) ? performance.now() : Date.now();
-      var dt = Math.min(100, now - lastFrameTs); // ограничим скачки
+      var dt = Math.min(100, now - lastFrameTs);
       lastFrameTs = now;
-
       playerAnimTimerMs += dt;
       if (playerAnimTimerMs >= RUN_FRAME_MS){
         playerAnimTimerMs -= RUN_FRAME_MS;
         playerAnimFrame = (playerAnimFrame + 1) % 2;
       }
-
       var imgR = playerSprites.run[playerAnimFrame];
       if (imgR && imgR.complete) ctx.drawImage(imgR, player.x, player.y, player.w, player.h);
       else { ctx.fillStyle="#ffffff"; ctx.fillRect(player.x, player.y, player.w, player.h); }
@@ -302,8 +299,8 @@
 
   /* Параметры игры */
   var GRAVITY=0.85;               // быстрое приземление
-  var JUMP_VEL1=-15.9;            // ↑ было -12.2 (x1.3 по высоте)
-  var JUMP_VEL2=-12.4;            // ↑ было -9.5  (x1.3 по высоте)
+  var JUMP_VEL1=-12.2;            // ← вернули оригинальные значения
+  var JUMP_VEL2=-9.5;
   var JUMP2_WINDOW_MS=350;        // окно для второго прыжка (мс)
   var JUMP2_MIN_UP_VY=-1.5;       // пока ещё движемся вверх (не на пике)
 
@@ -316,7 +313,7 @@
 
   var player = { x:50, y:GROUND_Y-56, w:56, h:56, vy:0, onGround:true, jumpCount:0, maxJumps:2, firstJumpAt:0 };
 
-  /* Препятствия + разнообразие спавна */
+  /* Препятствия + запрет повторов подряд */
   function loadImg(src){ var im=new Image(); im.src=src; return im; }
   var SPRITES = {
     HIGH:   loadImg("assets/obstacle_high.png"),
@@ -325,27 +322,26 @@
     FLY:    loadImg("assets/obstacle_fly.png")
   };
   var obstacles=[]; var spawnTimer=0;
-  var lastType=-1, sameTypeCount=0;
+  var lastType=-1; // 0 M, 1 W, 2 H, 3 F
 
-  function chooseType(){
-    var bag=[0,0,1,1,2,3,0,1]; // 0 M, 1 W, 2 H, 3 F
-    var t = bag[Math.floor(Math.random()*bag.length)];
-    if (t===lastType && sameTypeCount>=2){
-      var alt=[0,1,2,3].filter(function(x){return x!==lastType;});
-      t = alt[Math.floor(Math.random()*alt.length)];
+  function chooseTypeNoRepeat(){
+    var pool=[0,1,2,3];
+    if (lastType !== -1){
+      pool = pool.filter(function(t){ return t !== lastType; }); // исключим прошлый тип
     }
-    if (t===lastType) sameTypeCount++; else { sameTypeCount=1; lastType=t; }
+    var t = pool[Math.floor(Math.random()*pool.length)];
+    lastType = t;
     return t;
   }
 
   function spawnObstacle(){
-    var type = chooseType();
+    var type = chooseTypeNoRepeat();
     var w,h,y,sprite;
     if (type===0){ w=56; h=56;  sprite=SPRITES.MEDIUM; y=GROUND_Y-h; }
     else if (type===1){ w=96; h=56; sprite=SPRITES.WIDE;   y=GROUND_Y-h; }
     else if (type===2){ w=56; h=112; sprite=SPRITES.HIGH;  y=GROUND_Y-h; }
     else { w=64; h=40;  sprite=SPRITES.FLY;    y=GROUND_Y-90-h; if (y<16) y=16; }
-    obstacles.push({ x:W+10, y:y, w:w, h:h, sprite:sprite, passed:false });
+    obstacles.push({ x:W+10, y:y, w:w, h:h, sprite:sprite, passed:false, type:type });
   }
 
   /* --- Хитбоксы меньше спрайтов --- */
@@ -412,7 +408,7 @@
     var elapsedSec = (Date.now() - runStart)/1000;
     worldSpeed = SPEED_START + SPEED_ACCEL*elapsedSec;
 
-    /* спавн препятствий (с вариативностью) */
+    /* спавн препятствий (без повторов) */
     spawnTimer -= worldSpeed;
     if (spawnTimer <= 0){
       spawnObstacle();
@@ -579,7 +575,7 @@
     score = 0; gameOver = false;
     player.y = GROUND_Y - player.h; player.vy = 0; player.onGround = true; player.jumpCount = 0;
 
-    // сбросим таймер анимации, чтобы после рестарта кадры не «слипались»
+    // сбросим таймер анимации
     playerAnimTimerMs = 0;
     playerAnimFrame = 0;
     lastFrameTs = (window.performance && performance.now) ? performance.now() : Date.now();
