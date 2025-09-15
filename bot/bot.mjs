@@ -4,45 +4,49 @@ import { Bot, InlineKeyboard } from 'grammy';
 const token = process.env.BOT_TOKEN;
 if (!token) throw new Error('BOT_TOKEN is not set in .env');
 
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID; // ваш chat_id администратора
+const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID || ''; // заполни в .env после /id
 const WEBAPP_URL = process.env.WEBAPP_URL || '';
 
 const bot = new Bot(token);
 
-// На всякий случай отключаем вебхук, чтобы polling работал
+// Отключаем вебхук, чтобы точно работал long polling
 (async () => {
   try {
     await bot.api.deleteWebhook({ drop_pending_updates: true });
     console.log('Webhook deleted (if was set). Switching to polling...');
   } catch (e) {
-    console.warn('deleteWebhook failed:', e.message || e);
+    console.warn('deleteWebhook failed:', e?.message || e);
   }
 })();
 
-// /start с кнопкой "Открыть игру"
+// /start — кнопка для открытия мини-аппа
 bot.command('start', async (ctx) => {
   const kb = new InlineKeyboard().webApp('Открыть игру', WEBAPP_URL);
-  await ctx.reply('Привет! Запускай мини-игру 👇', { reply_markup: kb });
+  await ctx.reply(`Привет! Запускай мини-игру 👇\nВаш chat_id: ${ctx.chat?.id}`, { reply_markup: kb });
 });
 
-// Вспомогательные команды
-bot.command('ping', (ctx) => ctx.reply('pong ✅'));
+// /id — подсказка chat_id
 bot.command('id', (ctx) => ctx.reply(`Ваш chat_id: ${ctx.chat?.id}`));
 
-// Эхо на обычные сообщения (для проверки, что бот жив)
+// /ping — быстрый тест
+bot.command('ping', (ctx) => ctx.reply('pong ✅'));
+
+// Эхо для обычных сообщений — удобно проверить, что бот жив
 bot.on('message:text', async (ctx) => {
-  // Если это не web_app_data, просто ответим коротко
-  await ctx.reply(`Принято: "${ctx.message.text}"`);
+  // Не перехватываем web_app_data, обрабатывается ниже
+  if (!ctx.message.web_app_data) {
+    await ctx.reply(`Эхо: ${ctx.message.text}`);
+  }
 });
 
-// Обработка данных из мини-аппа (WebAppData)
+// Приём данных из мини-аппа (WebAppData)
 bot.on('message', async (ctx) => {
-  const data = ctx.message?.web_app_data?.data;
-  if (!data) return;
+  const raw = ctx.message?.web_app_data?.data;
+  if (!raw) return;
 
   let payload;
   try {
-    payload = JSON.parse(data);
+    payload = JSON.parse(raw);
   } catch {
     return;
   }
@@ -66,7 +70,7 @@ bot.on('message', async (ctx) => {
 • Лучший счёт: *${best}*
 • Приз: *${prize}*`;
 
-    // Админу
+    // Сообщение админу
     if (ADMIN_CHAT_ID) {
       try {
         await bot.api.sendMessage(ADMIN_CHAT_ID, text, { parse_mode: 'Markdown' });
@@ -75,11 +79,12 @@ bot.on('message', async (ctx) => {
       }
     }
 
-    // Игроку — подтверждение
+    // Подтверждение игроку
     try {
       await ctx.reply('Результат зафиксирован! Спасибо за игру 🙌');
     } catch {}
   }
 });
 
+bot.catch((err) => console.error('BOT ERROR:', err));
 bot.start().then(() => console.log('Bot is running (polling)...'));
