@@ -269,7 +269,36 @@
            Object.assign(new Image(),{src:"assets/player_run2.png"}) ],
     jump: Object.assign(new Image(),{src:"assets/player_jump.png"})
   };
-  var playerAnimTime=0, playerAnimFrame=0;
+
+  /* === НАСТРОЙКИ АНИМАЦИИ БЕГА ПО ВРЕМЕНИ === */
+  var RUN_FRAME_MS = 140;     // длительность одного кадра бега (мс)
+  var playerAnimTimerMs = 0;  // накопитель времени
+  var playerAnimFrame = 0;    // 0 или 1
+  var lastFrameTs = (window.performance && performance.now) ? performance.now() : Date.now();
+
+  function drawPlayer(){
+    var inAir = !player.onGround;
+    if (inAir){
+      var imgJ = playerSprites.jump;
+      if (imgJ && imgJ.complete) ctx.drawImage(imgJ, player.x, player.y, player.w, player.h);
+      else { ctx.fillStyle="#ffffff"; ctx.fillRect(player.x, player.y, player.w, player.h); }
+    } else {
+      // Переключаем кадры только по реальному времени, а не по скорости мира
+      var now = (window.performance && performance.now) ? performance.now() : Date.now();
+      var dt = Math.min(100, now - lastFrameTs); // ограничим скачки
+      lastFrameTs = now;
+
+      playerAnimTimerMs += dt;
+      if (playerAnimTimerMs >= RUN_FRAME_MS){
+        playerAnimTimerMs -= RUN_FRAME_MS;
+        playerAnimFrame = (playerAnimFrame + 1) % 2;
+      }
+
+      var imgR = playerSprites.run[playerAnimFrame];
+      if (imgR && imgR.complete) ctx.drawImage(imgR, player.x, player.y, player.w, player.h);
+      else { ctx.fillStyle="#ffffff"; ctx.fillRect(player.x, player.y, player.w, player.h); }
+    }
+  }
 
   /* Параметры игры */
   var GRAVITY=0.85;               // быстрое приземление
@@ -286,21 +315,6 @@
   var rafId=null;
 
   var player = { x:50, y:GROUND_Y-56, w:56, h:56, vy:0, onGround:true, jumpCount:0, maxJumps:2, firstJumpAt:0 };
-
-  function drawPlayer(){
-    var inAir = !player.onGround;
-    if (inAir){
-      var imgJ = playerSprites.jump;
-      if (imgJ && imgJ.complete) ctx.drawImage(imgJ, player.x, player.y, player.w, player.h);
-      else { ctx.fillStyle="#ffffff"; ctx.fillRect(player.x, player.y, player.w, player.h); }
-    } else {
-      playerAnimTime += worldSpeed;
-      if (playerAnimTime > 18){ playerAnimTime=0; playerAnimFrame=(playerAnimFrame+1)%2; }
-      var imgR = playerSprites.run[playerAnimFrame];
-      if (imgR && imgR.complete) ctx.drawImage(imgR, player.x, player.y, player.w, player.h);
-      else { ctx.fillStyle="#ffffff"; ctx.fillRect(player.x, player.y, player.w, player.h); }
-    }
-  }
 
   /* Препятствия + разнообразие спавна */
   function loadImg(src){ var im=new Image(); im.src=src; return im; }
@@ -564,6 +578,12 @@
     worldSpeed = SPEED_START;
     score = 0; gameOver = false;
     player.y = GROUND_Y - player.h; player.vy = 0; player.onGround = true; player.jumpCount = 0;
+
+    // сбросим таймер анимации, чтобы после рестарта кадры не «слипались»
+    playerAnimTimerMs = 0;
+    playerAnimFrame = 0;
+    lastFrameTs = (window.performance && performance.now) ? performance.now() : Date.now();
+
     obstacles.length = 0; spawnTimer = 0;
     bgDecos.length = 0; bgOffset = 0; scheduleNextDeco();
     if (rafId) cancelAnimationFrame(rafId); rafId = null;
