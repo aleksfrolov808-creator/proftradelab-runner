@@ -1,98 +1,61 @@
-@'
-import "dotenv/config";
-import { Bot, InlineKeyboard } from "grammy";
-import express from "express";
-import Database from "better-sqlite3";
-import cors from "cors";
+import 'dotenv/config';
+import { Bot, InlineKeyboard } from 'grammy';
 
-// --- Telegram Bot ---
-const bot = new Bot(process.env.BOT_TOKEN);
-const webAppUrl = process.env.WEBAPP_URL;
+const token = process.env.BOT_TOKEN;
+if (!token) throw new Error('BOT_TOKEN is not set in .env');
 
-// Кнопка запуска мини‑приложения
-bot.command("start", async (ctx) => {
-  const kb = new InlineKeyboard().webApp("🎮 Играть", webAppUrl);
-  await ctx.reply("ПрофТрейдЛаб — запусти мини‑приложение:", { reply_markup: kb });
+const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID; // например: 123456789
+const WEBAPP_URL = process.env.WEBAPP_URL || '';
+
+const bot = new Bot(token);
+
+// /start с кнопкой "Открыть игру"
+bot.command('start', ctx => {
+  const kb = new InlineKeyboard().webApp('Открыть игру', WEBAPP_URL);
+  return ctx.reply('Привет! Запускай мини-игру 👇', { reply_markup: kb });
 });
 
-// --- База данных (SQLite) ---
-const db = new Database("data.db");
-db.exec(`
-  CREATE TABLE IF NOT EXISTS scores (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tg_user_id INTEGER,
-    fio TEXT,
-    phone TEXT,
-    email TEXT,
-    points INTEGER,
-    ts DATETIME DEFAULT (datetime('now'))
-  );
+// Команда /id — чтобы узнать id чата (удобно для ADMIN_CHAT_ID)
+bot.command('id', ctx => ctx.reply(`Ваш chat_id: ${ctx.chat?.id}`));
 
-  CREATE INDEX IF NOT EXISTS idx_scores_points ON scores(points DESC);
-`);
+// Приходит от WebApp: ctx.message.web_app_data.data
+bot.on('message', async ctx => {
+  const data = ctx.message?.web_app_data?.data;
+  if (!data) return; // обычные сообщения игнорим
 
-// Принимаем результат из WebApp (sendData)
-bot.on("message:web_app_data", async (ctx) => {
-  try {
-    const payload = JSON.parse(ctx.message.web_app_data.data || "{}");
-    // ожидаем { type: 'session_result', profile: {fio, phone, email}, best }
-    if (payload?.type === "session_result") {
-      const { profile, best } = payload;
-      const fio = String(profile?.fio || "").slice(0, 200);
-      const phone = String(profile?.phone || "").slice(0, 60);
-      const email = String(profile?.email || "").slice(0, 120);
-      const points = Math.max(0, Number(best) || 0);
+  let payload;
+  try { payload = JSON.parse(data); } catch (e) { return; }
 
-      const tg_user_id = ctx.from?.id || null;
+  if (payload.type === 'session_result') {
+    const p = payload.profile || {};
+    const best = payload.best ?? 0;
+    const prize = (best>=70?'Термос':best>=50?'Шоппер':best>=30?'Блокнот и ручка':best>=20?'Брелок':'—');
+    const when = new Date(payload.ts || Date.now()).toLocaleString('ru-RU');
 
-      const ins = db.prepare(`
-        INSERT INTO scores (tg_user_id, fio, phone, email, points)
-        VALUES (@tg_user_id, @fio, @phone, @email, @points)
-      `);
-      ins.run({ tg_user_id, fio, phone, email, points });
+    const text =
+`🎮 *Итог сессии*
+• Дата/время: ${when}
+• Игрок: ${p.lastName || ''} ${p.firstName || ''} ${p.middleName || ''}
+• Телефон: ${p.phone || '-'}
+• Email: ${p.email || '-'}
+• Лучший счёт: *${best}*
+• Приз: *${prize}*`;
 
-      await ctx.reply(`Результат сохранён ✅  (очки: ${points})`);
-    } else {
-      await ctx.reply("Получены данные, но тип неизвестен.");
+    // Сообщение админу
+    if (ADMIN_CHAT_ID) {
+      try {
+        await bot.api.sendMessage(ADMIN_CHAT_ID, text, { parse_mode: 'Markdown' });
+      } catch (e) {
+        console.error('Send to admin failed:', e);
+      }
     }
-  } catch (e) {
-    await ctx.reply("Ошибка при разборе данных из WebApp.");
+
+    // Короткий ответ игроку
+    try {
+      await ctx.reply('Результат зафиксирован! Спасибо за игру 🙌');
+    } catch (e) {}
   }
 });
 
-// На любое сообщение — повтор кнопки
-bot.on("message", async (ctx) => {
-  const kb = new InlineKeyboard().webApp("🎮 Играть", webAppUrl);
-  await ctx.reply("Открыть игру:", { reply_markup: kb });
-});
-
-// --- HTTP API (для WebApp) ---
-const app = express();
-app.use(express.json());
-
-// Разрешаем CORS с вашего GitHub Pages
-const allowedOrigin = process.env.API_ORIGIN;
-app.use(cors({
-  origin: allowedOrigin ? [allowedOrigin] : false
-}));
-
-// Топ‑10 по очкам (последние лучшие)
-app.get("/api/top10", (req, res) => {
-  const top = db.prepare(`
-    SELECT fio, points, ts FROM scores
-    ORDER BY points DESC, ts DESC
-    LIMIT 10
-  `).all();
-  res.json({ top });
-});
-
-// Запуск бота (long polling) и API
-const port = process.env.PORT || 3000;
-
 bot.start();
-console.log("Bot is running");
-
-app.listen(port, () => {
-  console.log("HTTP API on port", port);
-});
-'@ | Set-Content -Encoding UTF8 bot\bot.mjs
+console.log('Bot is running');
