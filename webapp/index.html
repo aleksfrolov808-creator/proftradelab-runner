@@ -32,8 +32,12 @@
     #regOverlay h2,#resultOverlay h2,#regOverlay label,#resultOverlay p,#regOverlay .note,#regOverlay .prizes h3,#regOverlay .prizes,#resultOverlay{color:#000000}
     #regOverlay input[type="text"],#regOverlay input[type="tel"],#regOverlay input[type="email"]{width:100%;background:#ffffff;border:2px solid #e5e5e5;color:#000000;padding:8px;border-radius:6px;margin-top:4px}
     #regOverlay .checkbox{color:#000000}
-    #regOverlay .prizes{background:#ffffff;border:2px solid #e5e5e5}
-    #regOverlay .prize-row{border-bottom:1px dashed #e5e5e5}
+    #regOverlay .prizes{background:#ffffff;border:2px solid #e5e5e5;border-radius:10px;padding:12px}
+    #regOverlay .prizes h3{margin:0 0 10px;font-size:16px}
+    #regOverlay .prize-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed #e5e5e5}
+    #regOverlay .prize-row:last-child{border-bottom:none}
+    #regOverlay .prize-points{font-weight:700}
+    #regOverlay .prize-badge{padding:6px 10px;border-radius:999px;border:2px solid #53B5AF;background:#f2fbfa;color:#000000;font-weight:700;font-size:12px;white-space:nowrap}
     #regOverlay .note{color:#444444}
     #regOverlay .btn.brand,#resultOverlay .btn.brand{background:rgb(83,181,175);color:#000000;border-color:transparent}
     #resultOverlay b{color:#000000}
@@ -70,10 +74,11 @@
           </div>
           <div class="prizes">
             <h3>Призы и очки</h3>
-            <div class="prize-row"><div>20–30</div><div>Брелок</div></div>
-            <div class="prize-row"><div>30–50</div><div>Блокнот и ручка</div></div>
-            <div class="prize-row"><div>50–70</div><div>Шоппер</div></div>
-            <div class="prize-row"><div>70+</div><div>Термос</div></div>
+            <div class="prize-row"><div class="prize-points">20–30</div><div class="prize-badge">Брелок</div></div>
+            <div class="prize-row"><div class="prize-points">30–50</div><div class="prize-badge">Блокнот и ручка</div></div>
+            <div class="prize-row"><div class="prize-points">50–70</div><div class="prize-badge">Шоппер</div></div>
+            <div class="prize-row"><div class="prize-points">70+</div><div class="prize-badge">Термос</div></div>
+            <div class="note" style="margin-top:8px">Очки — лучший результат за 2 минуты.</div>
           </div>
         </div>
       </div>
@@ -118,17 +123,18 @@
   var RUN_FRAME_MS=140,playerAnimTimerMs=0,playerAnimFrame=0,lastFrameTs=(performance&&performance.now)?performance.now():Date.now();
   function drawPlayer(){var inAir=!player.onGround;if(inAir){var imgJ=playerSprites.jump;if(imgJ&&imgJ.complete)ctx.drawImage(imgJ,player.x,player.y,player.w,player.h)}else{var now=(performance&&performance.now)?performance.now():Date.now();var dt=Math.min(100,now-lastFrameTs);lastFrameTs=now;playerAnimTimerMs+=dt;if(playerAnimTimerMs>=RUN_FRAME_MS){playerAnimTimerMs-=RUN_FRAME_MS;playerAnimFrame=(playerAnimFrame+1)%2}var imgR=playerSprites.run[playerAnimFrame];if(imgR&&imgR.complete)ctx.drawImage(imgR,player.x,player.y,player.w,player.h)}}
   var GRAVITY=0.85,JUMP_VEL1=-12.2,JUMP_VEL2=-9.5,JUMP2_WINDOW_MS=400,JUMP2_MIN_UP_VY=1;
-  var SPEED_START=7.0,SPEED_ACCEL=0.04,SPAWN_MIN=340,SPAWN_VAR=300;
+  var TARGET_END_SPEED=11.8,SESSION_LEN_S=120,SPEED_START=4.8,SPEED_ACCEL=(TARGET_END_SPEED-SPEED_START)/SESSION_LEN_S;
+  var SPAWN_MIN=420,SPAWN_VAR=360;
   var worldSpeed=SPEED_START,score=0,best=0,gameOver=false,ready=false,runStart=Date.now();var rafId=null;
   var player={x:50,y:GROUND_Y-56,w:56,h:56,vy:0,onGround:true,jumpCount:0,maxJumps:2,firstJumpAt:0};
   function loadImg2(src){var im=new Image();im.src=src;return im}
   var SPRITES={HIGH:loadImg2("assets/obstacle_high.png"),WIDE:loadImg2("assets/obstacle_wide.png"),MEDIUM:loadImg2("assets/obstacle_medium.png"),FLY:loadImg2("assets/obstacle_fly.png")};
   var obstacles=[];var spawnTimer=0;var lastType=-1;
   function chooseTypeNoRepeat(){var pool=[0,1,2,3];if(lastType!==-1){pool=pool.filter(function(t){return t!==lastType})}var t=pool[Math.floor(Math.random()*pool.length)];lastType=t;return t}
-  function spawnObstacle(){var type=chooseTypeNoRepeat();var w,h,y,sprite;if(type===0){w=56;h=56;sprite=SPRITES.MEDIUM;y=GROUND_Y-h}else if(type===1){w=96;h=56;sprite=SPRITES.WIDE;y=GROUND_Y-h}else if(type===2){w=56;h=112;sprite=SPRITES.HIGH;y=GROUND_Y-h}else{w=64;h=40;sprite=SPRITES.FLY;y=GROUND_Y-90-h;if(y<16)y=16}obstacles.push({x:W+10,y:y,w:w,h:h,sprite:sprite,passed:false,type:type})}
-  var OB_HIT_W=0.85,OB_HIT_H=0.80;var PL_HIT_W=0.80,PL_HIT_H=0.90;
+  function spawnObstacle(){var type=chooseTypeNoRepeat();var w,h,y,sprite;if(type===0){w=56;h=56;sprite=SPRITES.MEDIUM;y=GROUND_Y-h}else if(type===1){w=96;h=56;sprite=SPRITES.WIDE;y=GROUND_Y-h}else if(type===2){w=52;h=104;sprite=SPRITES.HIGH;y=GROUND_Y-h}else{w=64;h=40;sprite=SPRITES.FLY;y=GROUND_Y-90-h;if(y<16)y=16}obstacles.push({x:W+10,y:y,w:w,h:h,sprite:sprite,passed:false,type:type})}
+  var OB_HIT_W=0.85,OB_HIT_H=0.80;var PL_HIT_W=0.80,PL_HIT_H=0.90;var OB_HIGH_HIT_W=0.78,OB_HIGH_HIT_H=0.70;
   function playerHitbox(p){var w=p.w*PL_HIT_W,h=p.h*PL_HIT_H;var x=p.x+(p.w-w)/2;var y=p.y+(p.h-h);return{x:x,y:y,w:w,h:h}}
-  function obstacleHitbox(o){var w=o.w*OB_HIT_W,h=o.h*OB_HIT_H;var x=o.x+(o.w-w)/2;var isAir=o.y<(GROUND_Y-o.h);var y=isAir?(o.y+(o.h-h)/2):(o.y+(o.h-h));return{x:x,y:y,w:w,h:h}}
+  function obstacleHitbox(o){var w,h;if(o.type===2){w=o.w*OB_HIGH_HIT_W;h=o.h*OB_HIGH_HIT_H}else{w=o.w*OB_HIT_W;h=o.h*OB_HIT_H}var x=o.x+(o.w-w)/2;var isAir=o.y<(GROUND_Y-o.h);var y=isAir?(o.y+(o.h-h)/2):(o.y+(o.h-h));return{x:x,y:y,w:w,h:h}}
   function rectsOverlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
   function jump(){if(gameOver||!sessionActive()||!ready)return;if(player.onGround){player.vy=JUMP_VEL1;player.onGround=false;player.jumpCount=1;player.firstJumpAt=Date.now();return}var since=Date.now()-player.firstJumpAt;if(player.jumpCount===1&&since<=JUMP2_WINDOW_MS&&player.vy<JUMP2_MIN_UP_VY){player.vy=JUMP_VEL2;player.jumpCount=2}}
   window.addEventListener('keydown',function(e){if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();jump()}if(e.code==='Enter'&&(gameOver||!sessionActive()))startCountdown(function(){resetRun()})});
@@ -139,7 +145,7 @@
     var grd=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);grd.addColorStop(0,"#53B5AF");grd.addColorStop(1,"#53B5AF");ctx.fillStyle=grd;ctx.fillRect(0,GROUND_Y,W,2);
     if(!sessionActive()){dimOverlay('Сессия завершена');return}
     var elapsedSec=(Date.now()-runStart)/1000;worldSpeed=SPEED_START+SPEED_ACCEL*elapsedSec;
-    spawnTimer-=worldSpeed;if(spawnTimer<=0){spawnObstacle();var bonusGap=(Math.random()<0.18)?160:0;spawnTimer=SPAWN_MIN+Math.random()*SPAWN_VAR+bonusGap}
+    spawnTimer-=worldSpeed;if(spawnTimer<=0){spawnObstacle();var bonusGap=(Math.random()<0.22)?220:0;spawnTimer=SPAWN_MIN+Math.random()*SPAWN_VAR+bonusGap}
     player.vy+=GRAVITY;player.y+=player.vy;if(player.y>=GROUND_Y-player.h){player.y=GROUND_Y-player.h;player.vy=0;if(!player.onGround){player.onGround=true;player.jumpCount=0}}else{player.onGround=false}
     for(var i=obstacles.length-1;i>=0;i--){var o=obstacles[i];o.x-=worldSpeed;if(o.sprite&&o.sprite.complete){ctx.imageSmoothingEnabled=false;ctx.drawImage(o.sprite,o.x,o.y,o.w,o.h)}else{ctx.fillStyle='#53B5AF';ctx.fillRect(o.x,o.y,o.w,o.h)}if(o.x+o.w<0)obstacles.splice(i,1);if(!o.passed&&o.x+o.w<player.x){o.passed=true;score++;updateHud()}if(!gameOver&&rectsOverlap(playerHitbox(player),obstacleHitbox(o))){gameOver=true;if(score>best){best=score;updateHud()}}}
     drawPlayer();
