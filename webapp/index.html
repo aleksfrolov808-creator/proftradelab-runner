@@ -123,8 +123,8 @@
   var RUN_FRAME_MS=140,playerAnimTimerMs=0,playerAnimFrame=0,lastFrameTs=(performance&&performance.now)?performance.now():Date.now();
   function drawPlayer(){var inAir=!player.onGround;if(inAir){var imgJ=playerSprites.jump;if(imgJ&&imgJ.complete)ctx.drawImage(imgJ,player.x,player.y,player.w,player.h)}else{var now=(performance&&performance.now)?performance.now():Date.now();var dt=Math.min(100,now-lastFrameTs);lastFrameTs=now;playerAnimTimerMs+=dt;if(playerAnimTimerMs>=RUN_FRAME_MS){playerAnimTimerMs-=RUN_FRAME_MS;playerAnimFrame=(playerAnimFrame+1)%2}var imgR=playerSprites.run[playerAnimFrame];if(imgR&&imgR.complete)ctx.drawImage(imgR,player.x,player.y,player.w,player.h)}}
   var GRAVITY=0.85,JUMP_VEL1=-12.2,JUMP_VEL2=-9.5,JUMP2_WINDOW_MS=400,JUMP2_MIN_UP_VY=1;
-  var TARGET_END_SPEED=11.8,SESSION_LEN_S=120,SPEED_START=4.8,SPEED_ACCEL=(TARGET_END_SPEED-SPEED_START)/SESSION_LEN_S;
-  var SPAWN_MIN=420,SPAWN_VAR=360;
+  var TARGET_END_SPEED=11.8,SESSION_LEN_S=120,SPEED_START=5.76,SPEED_ACCEL=(TARGET_END_SPEED-SPEED_START)/SESSION_LEN_S;
+  var SPAWN_MIN=340,SPAWN_VAR=300;
   var worldSpeed=SPEED_START,score=0,best=0,gameOver=false,ready=false,runStart=Date.now();var rafId=null;
   var player={x:50,y:GROUND_Y-56,w:56,h:56,vy:0,onGround:true,jumpCount:0,maxJumps:2,firstJumpAt:0};
   function loadImg2(src){var im=new Image();im.src=src;return im}
@@ -145,7 +145,7 @@
     var grd=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);grd.addColorStop(0,"#53B5AF");grd.addColorStop(1,"#53B5AF");ctx.fillStyle=grd;ctx.fillRect(0,GROUND_Y,W,2);
     if(!sessionActive()){dimOverlay('Сессия завершена');return}
     var elapsedSec=(Date.now()-runStart)/1000;worldSpeed=SPEED_START+SPEED_ACCEL*elapsedSec;
-    spawnTimer-=worldSpeed;if(spawnTimer<=0){spawnObstacle();var bonusGap=(Math.random()<0.22)?220:0;spawnTimer=SPAWN_MIN+Math.random()*SPAWN_VAR+bonusGap}
+    spawnTimer-=worldSpeed;if(spawnTimer<=0){spawnObstacle();var bonusGap=(Math.random()<0.18)?160:0;spawnTimer=SPAWN_MIN+Math.random()*SPAWN_VAR+bonusGap}
     player.vy+=GRAVITY;player.y+=player.vy;if(player.y>=GROUND_Y-player.h){player.y=GROUND_Y-player.h;player.vy=0;if(!player.onGround){player.onGround=true;player.jumpCount=0}}else{player.onGround=false}
     for(var i=obstacles.length-1;i>=0;i--){var o=obstacles[i];o.x-=worldSpeed;if(o.sprite&&o.sprite.complete){ctx.imageSmoothingEnabled=false;ctx.drawImage(o.sprite,o.x,o.y,o.w,o.h)}else{ctx.fillStyle='#53B5AF';ctx.fillRect(o.x,o.y,o.w,o.h)}if(o.x+o.w<0)obstacles.splice(i,1);if(!o.passed&&o.x+o.w<player.x){o.passed=true;score++;updateHud()}if(!gameOver&&rectsOverlap(playerHitbox(player),obstacleHitbox(o))){gameOver=true;if(score>best){best=score;updateHud()}}}
     drawPlayer();
