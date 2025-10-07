@@ -12,7 +12,8 @@ html,body{height:100%;margin:0;font-family:monospace;background:var(--bg);color:
 .wrap{flex:1;display:flex}
 .card{flex:1;display:flex;flex-direction:column;background:#000;border:3px solid var(--brand)}
 h1{margin:0;padding:10px var(--pad);font-size:20px}
-canvas{display:block;width:100%;height:100%;background:#000;image-rendering:pixelated}
+.gameBox{flex:1;display:flex;min-height:0}
+canvas{display:block;width:100%;height:100%;background:#000;image-rendering:pixelated;touch-action:manipulation}
 .bar{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:8px var(--pad);flex-wrap:wrap}
 .btn{background:var(--brand);color:#000;border:none;padding:8px 12px;cursor:pointer;border-radius:8px}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:999;height:var(--app-height);padding:16px}
@@ -38,7 +39,9 @@ input{width:100%;padding:10px;border:1px solid #e5e5e5;border-radius:8px;font-fa
   <div class="wrap">
     <div class="card">
       <h1>🧪 ПрофТрейдЛаб 8-bit Runner</h1>
-      <canvas id="game" width="1200" height="400"></canvas>
+      <div class="gameBox">
+        <canvas id="game" width="1200" height="400"></canvas>
+      </div>
       <div class="bar">
         <div>Очки: <span id="score">0</span> · Рекорд: <span id="best">0</span> · Осталось: <span id="timeLeft">02:00</span></div>
         <div style="display:flex;gap:8px"><button id="restart" class="btn">Заново</button><button id="newSession" class="btn">Регистрация</button></div>
@@ -60,7 +63,6 @@ input{width:100%;padding:10px;border:1px solid #e5e5e5;border-radius:8px;font-fa
           <div id="regErr" class="error"></div>
           <div class="actions"><button id="startBtn" class="btn">Продолжить</button></div>
         </div>
-
         <div class="prizes">
           <h3>Призы и очки</h3>
           <div class="prize-row"><div><b>20–30</b></div><div class="badge">Брелок</div></div>
@@ -90,9 +92,14 @@ input{width:100%;padding:10px;border:1px solid #e5e5e5;border-radius:8px;font-fa
 
 <script>
 (function(){
-const cv=document.getElementById('game');const ctx=cv.getContext('2d');let W=cv.width,H=cv.height,GROUND_Y=H-32
-function resizeCanvas(){const r=cv.parentElement.getBoundingClientRect();const w=Math.floor(r.width);const h=Math.floor(r.height);cv.style.width=w+'px';cv.style.height=h+'px';cv.width=w;cv.height=h;W=w;H=h;GROUND_Y=H-32}
-window.addEventListener('resize',resizeCanvas);resizeCanvas()
+function setAppHeight(){const vh=window.visualViewport?window.visualViewport.height:window.innerHeight;document.documentElement.style.setProperty('--app-height',vh+'px')}
+setAppHeight();window.addEventListener('resize',setAppHeight);if(window.visualViewport){window.visualViewport.addEventListener('resize',setAppHeight,{passive:true})}
+
+const cv=document.getElementById('game');const ctx=cv.getContext('2d')
+let W=cv.width,H=cv.height,GROUND_Y=H-32
+function resizeCanvas(){const holder=document.querySelector('.gameBox');const r=holder.getBoundingClientRect();const w=Math.max(320,Math.floor(r.width));const h=Math.max(220,Math.floor(r.height));const dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));cv.style.width=w+'px';cv.style.height=h+'px';cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);W=w;H=h;GROUND_Y=H-32}
+window.addEventListener('resize',resizeCanvas);if(window.visualViewport){window.visualViewport.addEventListener('resize',resizeCanvas,{passive:true})}
+resizeCanvas()
 
 const GRAVITY=0.85,JUMP_VEL1=-12.2,JUMP_VEL2=-9.5,JUMP2_WINDOW=400,JUMP2_MIN_UP_VY=1
 const TARGET_END_SPEED=11.8,SESSION_S=120,SPEED_START=5.76,SPEED_ACCEL=(TARGET_END_SPEED-SPEED_START)/SESSION_S
@@ -112,17 +119,11 @@ let bgX=0
 const scoreEl=document.getElementById('score'),bestEl=document.getElementById('best'),timeEl=document.getElementById('timeLeft')
 document.getElementById('restart').onclick=()=>{if(!sessionActive())return;startCountdown(()=>resetRun())}
 document.getElementById('newSession').onclick=()=>openReg()
-
 function updateHud(){scoreEl.textContent=score;bestEl.textContent=best}
 
-function drawBg(){if(!bg.complete){ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);return}
-const sc=H/bg.height;const tw=Math.ceil(bg.width*sc);bgX=(bgX-worldSpeed*0.5);if(bgX<=-tw)bgX+=tw;for(let x=-tw;x<W+tw;x+=tw)ctx.drawImage(bg,x+bgX,0,tw,H)}
-
+function drawBg(){const sc=H/bg.height;if(!bg.complete){ctx.fillStyle='#000';ctx.fillRect(0,0,W,H)}else{const tw=Math.ceil(bg.width*sc);bgX=(bgX-worldSpeed*0.5);if(bgX<=-tw)bgX+=tw;for(let x=-tw;x<W+tw;x+=tw)ctx.drawImage(bg,x+bgX,0,tW=tw,H)}}
 function drawGround(){ctx.fillStyle='#53B5AF';ctx.fillRect(0,GROUND_Y,W,2)}
-
-function drawPlayer(){if(!player.onGround){if(jumpImg.complete)ctx.drawImage(jumpImg,player.x,player.y,player.w,player.h);return}
-const now=performance.now();const dt=Math.min(100,now-lastTs);lastTs=now;animMs+=dt;if(animMs>=RUN_FRAME_MS){animMs-=RUN_FRAME_MS;animFrame=(animFrame+1)%2}
-const img=animFrame?run2:run1;if(img.complete)ctx.drawImage(img,player.x,player.y,player.w,player.h)}
+function drawPlayer(){if(!player.onGround){if(jumpImg.complete)ctx.drawImage(jumpImg,player.x,player.y,player.w,player.h);return}const now=performance.now();const dt=Math.min(100,now-lastTs);lastTs=now;animMs+=dt;if(animMs>=RUN_FRAME_MS){animMs-=RUN_FRAME_MS;animFrame=(animFrame+1)%2}const img=animFrame?run2:run1;if(img.complete)ctx.drawImage(img,player.x,player.y,player.w,player.h)}
 
 function jump(){if(gameOver||!sessionActive()||!ready)return
 if(player.onGround){player.vy=JUMP_VEL1;player.onGround=false;player.jumpCount=1;player.firstJumpAt=Date.now();return}
@@ -147,20 +148,21 @@ function hit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 let rafId=null
 function loop(){cancelAnimationFrame(rafId);rafId=requestAnimationFrame(update)}
 function update(){
-  ctx.clearRect(0,0,W,H);drawBg();drawGround()
+  ctx.clearRect(0,0,W,H)
+  const sc=H/bg.height;const tw=Math.ceil(bg.width*sc);if(!bg.complete){ctx.fillStyle='#000';ctx.fillRect(0,0,W,H)}else{bgX=(bgX-worldSpeed*0.5);if(bgX<=-tw)bgX+=tw;for(let x=-tw;x<W+tw;x+=tw)ctx.drawImage(bg,x+bgX,0,tw,H)}
+  ctx.fillStyle='#53B5AF';ctx.fillRect(0,GROUND_Y,W,2)
   if(!sessionActive()){ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,W,H);return}
   const t=(Date.now()-runStart)/1000;worldSpeed=SPEED_START+SPEED_ACCEL*t
   spawnT-=worldSpeed;if(spawnT<=0){spawnObs();const bonus=(Math.random()<0.18)?160:0;spawnT=SPAWN_MIN+Math.random()*SPAWN_VAR+bonus}
   player.vy+=GRAVITY;player.y+=player.vy
   if(player.y>=GROUND_Y-player.h){player.y=GROUND_Y-player.h;player.vy=0;if(!player.onGround){player.onGround=true;player.jumpCount=0}} else player.onGround=false
   for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];o.x-=worldSpeed;if(o.sprite.complete)ctx.drawImage(o.sprite,o.x,o.y,o.w,o.h);if(o.x+o.w<0)obstacles.splice(i,1);if(!o.passed&&o.x+o.w<player.x){o.passed=true;score++;updateHud()}if(!gameOver&&hit(pBox(player),oBox(o))){gameOver=true;if(score>best)best=score;updateHud()}}
-  drawPlayer()
-  if(!ready){drawCount();return}
+  const now=performance.now();const dt=Math.min(100,now-lastTs);lastTs=now;animMs+=dt;if(animMs>=RUN_FRAME_MS){animMs-=RUN_FRAME_MS;animFrame=(animFrame+1)%2}
+  const img=player.onGround?(animFrame?run2:run1):jumpImg;if(img.complete)ctx.drawImage(img,player.x,player.y,player.w,player.h)
+  if(!ready){ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(0,0,W,H);ctx.font='bold 56px monospace';ctx.textAlign='center';ctx.fillStyle='#53B5AF';ctx.fillText(' ',W/2,H/2);return}
   if(gameOver)return
   loop()
 }
-
-function drawCount(){ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(0,0,W,H);ctx.font='bold 56px monospace';ctx.textAlign='center';ctx.fillStyle='#53B5AF';ctx.fillText(' ',W/2,H/2)}
 
 function resetRun(){runStart=Date.now();worldSpeed=SPEED_START;score=0;gameOver=false;player.y=GROUND_Y-player.h;player.vy=0;player.onGround=true;player.jumpCount=0;animMs=0;animFrame=0;lastTs=performance.now();obstacles.length=0;spawnT=0;bgX=0;loop()}
 
@@ -177,7 +179,7 @@ function timeFmt(ms){const s=Math.ceil(ms/1000),m=Math.floor(s/60),ss=('0'+(s%60
 function sessionActive(){return sessionEndAt&&Date.now()<sessionEndAt}
 function showResults(){document.getElementById('finalBest').textContent=best;document.getElementById('prizeText').textContent=prize(best);try{if(window.Telegram?.WebApp){window.Telegram.WebApp.sendData(JSON.stringify({type:'lead',profile,best,endedAt:new Date().toISOString()}))}}catch(e){}res.style.display='flex'}
 function prize(p){if(p>=70)return'Термос';if(p>=50)return'Шоппер';if(p>=30)return'Блокнот и ручка';if(p>=20)return'Брелок';return'—'}
-function startCountdown(cb){ready=false;let t=3;function step(){ctx.clearRect(0,0,W,H);drawBg();drawGround();ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(0,0,W,H);ctx.font='bold 56px monospace';ctx.textAlign='center';ctx.fillStyle='#53B5AF';ctx.fillText(t===0?'':t,W/2,H/2);if(t===0){ready=true;cb&&cb();return}setTimeout(()=>{t--;step()},500)}step()}
+function startCountdown(cb){ready=false;let t=3;function step(){ctx.clearRect(0,0,W,H);const sc=H/bg.height;if(bg.complete){const tw=Math.ceil(bg.width*sc);for(let x=-tw;x<W+tw;x+=tw)ctx.drawImage(bg,x+bgX,0,tw,H)}ctx.fillStyle='#53B5AF';ctx.fillRect(0,GROUND_Y,W,2);ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(0,0,W,H);ctx.font='bold 56px monospace';ctx.textAlign='center';ctx.fillStyle='#53B5AF';ctx.fillText(t===0?'':t,W/2,H/2);if(t===0){ready=true;cb&&cb();return}setTimeout(()=>{t--;step()},500)}step()}
 document.getElementById('regOverlay').style.display='flex'
 })();
 </script>
