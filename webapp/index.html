@@ -101,6 +101,7 @@
 <script>
 (function(){
   try{if(window.Telegram&&window.Telegram.WebApp){window.Telegram.WebApp.expand();window.Telegram.WebApp.setBackgroundColor("#000000");window.Telegram.WebApp.setHeaderColor("secondary_bg_color")}}catch(e){}
+  if(!window.Telegram||!window.Telegram.WebApp){alert('Игра открыта НЕ из Telegram. Отправка результатов работать не будет. Откройте игру по кнопке бота.')}
   function setAppHeight(){var vh=(window.visualViewport&&window.visualViewport.height)?window.visualViewport.height:window.innerHeight;document.documentElement.style.setProperty('--app-height',vh+'px')}
   setAppHeight();window.addEventListener('resize',setAppHeight);if(window.visualViewport){window.visualViewport.addEventListener('resize',setAppHeight,{passive:true})}
   var root=document.documentElement;var rotateHint=document.getElementById('rotateHint');
@@ -186,7 +187,8 @@
     try{
       if(window.Telegram&&window.Telegram.WebApp){
         var payload={type:'lead',profile:profile,best:best,ts:Date.now(),endedAt:new Date().toISOString()};
-        window.Telegram.WebApp.sendData(JSON.stringify(payload))
+        window.Telegram.WebApp.sendData(JSON.stringify(payload));
+        try{window.Telegram.WebApp.showPopup({title:'Отправлено',message:'Результат отправлен администратору',buttons:[{type:'ok'}]})}catch(_){}
       }
     }catch(e){}
     resultOverlay.style.display='flex'
@@ -198,6 +200,28 @@
   function resetRun(){runStart=Date.now();worldSpeed=SPEED_START;score=0;gameOver=false;player.y=GROUND_Y-player.h;player.vy=0;player.onGround=true;player.jumpCount=0;playerAnimTimerMs=0;playerAnimFrame=0;lastFrameTs=(performance&&performance.now)?performance.now():Date.now();obstacles.length=0;spawnTimer=0;bgDecos.length=0;bgOffset=0;scheduleNextDeco();if(rafId)cancelAnimationFrame(rafId);rafId=null;loop()}
   resizeCanvas();document.getElementById('regOverlay').style.display='flex';
   (function(){ctx.fillStyle='#000000';ctx.fillRect(0,0,W,H);var g=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);g.addColorStop(0,'#53B5AF');g.addColorStop(1,'#53B5AF');ctx.fillStyle=g;ctx.fillRect(0,GROUND_Y,W,2)})()
+})();
+</script>
+
+<script>
+(function(){
+  function sendTest(){
+    try{
+      if(window.Telegram&&window.Telegram.WebApp){
+        window.Telegram.WebApp.sendData(JSON.stringify({type:'lead',test:true,at:new Date().toISOString()}));
+        try{window.Telegram.WebApp.showPopup({title:'OK',message:'sendData отправлен',buttons:[{type:'ok'}]})}catch(_){}
+      }else{
+        alert('Это окно НЕ внутри Telegram. Откройте игру по кнопке бота.')
+      }
+    }catch(e){alert('Ошибка sendData: '+e.message)}
+  }
+  var btn=document.createElement('button');
+  btn.textContent='Отправить тест';
+  btn.style.position='fixed';btn.style.right='10px';btn.style.bottom='10px';
+  btn.style.zIndex='99999';btn.style.padding='8px 12px';
+  btn.style.background='#53B5AF';btn.style.border='0';btn.style.borderRadius='8px';btn.style.color='#000';
+  btn.addEventListener('click',sendTest);
+  document.body.appendChild(btn);
 })();
 </script>
 </body>
