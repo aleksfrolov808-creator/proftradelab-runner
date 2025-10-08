@@ -30,7 +30,7 @@
     .rotate-hint{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.9);color:#ffffff;z-index:10000;text-align:center;padding:16px;border:3px solid var(--brand)}
     .rotate-hint.show{display:flex}
     #regOverlay .panel,#resultOverlay .panel{background:#ffffff;border:2px solid #e5e5e5;box-shadow:0 6px 28px rgba(0,0,0,.18)}
-    #regOverlay h2,#resultOverlay h2,#regOverlay label,#resultOverlay p,#regOverlay .note,#regOverlay .prizes h3,#regOverlay .prizes,#resultOverlay{color:#000000}
+    #regOverlay h2,#resultOverlay h2,#regOverlay label,#resultOverlay p,#regOverlay .note,#regOverlay .prizes h3,#regOverlay .призы,#resultOverlay{color:#000000}
     #regOverlay input[type="text"],#regOverlay input[type="tel"],#regOverlay input[type="email"]{width:100%;background:#ffffff;border:2px solid #e5e5e5;color:#000000;padding:8px;border-radius:6px;margin-top:4px}
     #regOverlay .checkbox{color:#000000}
     #regOverlay .prizes{background:#ffffff;border:2px solid #e5e5e5;border-radius:10px;padding:12px}
@@ -42,6 +42,8 @@
     #regOverlay .note{color:#444444}
     #regOverlay .btn.brand,#resultOverlay .btn.brand{background:rgb(83,181,175);color:#000000;border-color:transparent}
     #resultOverlay b{color:#000000}
+    .dbg{position:fixed;left:8px;bottom:8px;z-index:99999;background:rgba(0,0,0,.7);border:1px solid #53B5AF;border-radius:8px;padding:8px 10px;font-size:11px;color:#d6fff9;line-height:1.3}
+    .dbg b{color:#53B5AF}
   </style>
 </head>
 <body>
@@ -58,6 +60,7 @@
         </div>
       </div>
     </div>
+
     <div id="regOverlay" class="overlay" style="display:flex">
       <div class="panel">
         <div class="inner">
@@ -84,6 +87,7 @@
         </div>
       </div>
     </div>
+
     <div id="resultOverlay" class="overlay">
       <div class="panel">
         <div class="inner" style="grid-template-columns:1fr">
@@ -98,18 +102,17 @@
       </div>
     </div>
   </div>
+
   <div id="rotateHint" class="rotate-hint"><div><div style="font-size:18px;margin-bottom:8px">Поверните устройство</div></div></div>
 
 <script>
 (function(){
   try{
     if(window.Telegram && window.Telegram.WebApp){
+      window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
       window.Telegram.WebApp.setBackgroundColor("#000000");
       window.Telegram.WebApp.setHeaderColor("secondary_bg_color");
-      console.log("WebApp: ok");
-    } else {
-      console.warn("WebApp: not detected");
     }
   }catch(e){console.error(e);}
 
@@ -211,7 +214,7 @@
       if(window.Telegram&&window.Telegram.WebApp){
         var payload={type:'lead',profile:profile,best:best,ts:Date.now()};
         window.Telegram.WebApp.sendData(JSON.stringify(payload));
-        console.log('sendData:',payload);
+        console.log('sendData at finish:', payload);
       }
     }catch(e){console.error('sendData error',e)}
     resultOverlay.style.display='flex'
@@ -225,6 +228,13 @@
 
   resizeCanvas();document.getElementById('regOverlay').style.display='flex';
   (function(){ctx.fillStyle='#000000';ctx.fillRect(0,0,W,H);var g=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);g.addColorStop(0,'#53B5AF');g.addColorStop(1,'#53B5AF');ctx.fillStyle=g;ctx.fillRect(0,GROUND_Y,W,2)})()
+
+  var tg=window.Telegram?.WebApp||null;
+  var info={isWebApp:!!tg, userId: tg?.initDataUnsafe?.user?.id || '—', botId: tg?.initDataUnsafe?.receiver?.id || '—', queryId: tg?.initDataUnsafe?.query_id || '—', platform: tg?.platform || '—'};
+  var dbg=document.createElement('div');
+  dbg.className='dbg';
+  dbg.innerHTML='<b>WebApp:</b> '+info.isWebApp+'<br><b>user_id:</b> '+info.userId+'<br><b>bot_id:</b> '+info.botId+'<br><b>query_id:</b> '+info.queryId+'<br><b>platform:</b> '+info.platform;
+  document.body.appendChild(dbg);
 })();
 </script>
 
@@ -233,7 +243,7 @@
   function sendTest(){
     try{
       if(window.Telegram&&window.Telegram.WebApp){
-        var payload={type:'lead',test:true,profile:{lastName:'Тест',firstName:'Кнопка',middleName:'',phone:'+79990000000',email:'test@example.com'},best:42,ts:Date.now()};
+        var payload={type:'lead',profile:{lastName:'Тест',firstName:'Кнопка',middleName:'',phone:'+79990000000',email:'test@example.com'},best:42,ts:Date.now()};
         window.Telegram.WebApp.sendData(JSON.stringify(payload));
         try{window.Telegram.WebApp.showPopup({title:'OK',message:'sendData отправлен',buttons:[{type:'ok'}]})}catch(_){}
         console.log('sendData(test):',payload);
