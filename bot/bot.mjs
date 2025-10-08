@@ -7,22 +7,34 @@ import { Bot, InlineKeyboard } from 'grammy'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+process.on('unhandledRejection', (e) => {
+  console.error('unhandledRejection:', e)
+})
+process.on('uncaughtException', (e) => {
+  console.error('uncaughtException:', e)
+})
+
 const BOT_TOKEN = process.env.BOT_TOKEN || ''
 const WEBAPP_URL = process.env.WEBAPP_URL || ''
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID || ''
 
+console.log('ENV BOT_TOKEN:', BOT_TOKEN ? 'ok' : 'EMPTY')
+console.log('ENV WEBAPP_URL:', WEBAPP_URL || '(empty)')
+console.log('ENV ADMIN_CHAT_ID:', ADMIN_CHAT_ID || '(empty)')
+
 if (!BOT_TOKEN) {
-  console.error('BOT_TOKEN пуст. Проверь .env')
+  console.error('BOT_TOKEN отсутствует. Проверь .env')
   process.exit(1)
 }
 
 const bot = new Bot(BOT_TOKEN)
 
-const DATA_DIR = path.join(__dirname)
-const LEADS_FILE = path.join(DATA_DIR, 'leads.csv')
-
+const LEADS_FILE = path.join(__dirname, 'leads.csv')
 if (!fs.existsSync(LEADS_FILE)) {
   fs.writeFileSync(LEADS_FILE, 'Дата,Фамилия,Имя,Отчество,Телефон,Email,Очки,Приз,Завершено\n', 'utf8')
+  console.log('Создан файл:', LEADS_FILE)
+} else {
+  console.log('Файл существует:', LEADS_FILE)
 }
 
 bot.command('start', async (ctx) => {
@@ -81,7 +93,7 @@ bot.on('message:web_app_data', async (ctx) => {
     }
   } catch (e) {
     console.error('web_app_data handler error:', e)
-    await ctx.reply('Ошибка при обработке данных.')
+    try { await ctx.reply('Ошибка при обработке данных.') } catch {}
   }
 })
 
@@ -93,9 +105,15 @@ function getPrize(p) {
   return '—'
 }
 
-bot.start().then(() => {
-  console.log('Bot started')
-  console.log('WEBAPP_URL =', WEBAPP_URL)
-  console.log('CSV path   =', LEADS_FILE)
+;(async () => {
+  try {
+    const me = await bot.api.getMe()
+    console.log('Запускаю бота как:', `@${me.username}`, `(id ${me.id})`)
+  } catch (e) {
+    console.error('getMe error:', e)
+  }
+  await bot.start()
+  console.log('Bot started. WEBAPP_URL =', WEBAPP_URL)
+  console.log('CSV path =', LEADS_FILE)
   if (!ADMIN_CHAT_ID) console.warn('ADMIN_CHAT_ID не задан — админ-уведомления отключены')
-})
+})()
