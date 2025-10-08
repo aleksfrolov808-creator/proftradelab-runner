@@ -114,7 +114,7 @@
       window.Telegram.WebApp.setBackgroundColor("#000000");
       window.Telegram.WebApp.setHeaderColor("secondary_bg_color");
     }
-  }catch(e){console.error(e);}
+  }catch(e){}
 
   function setAppHeight(){var vh=(window.visualViewport&&window.visualViewport.height)?window.visualViewport.height:window.innerHeight;document.documentElement.style.setProperty('--app-height',vh+'px')}
   setAppHeight();window.addEventListener('resize',setAppHeight);if(window.visualViewport){window.visualViewport.addEventListener('resize',setAppHeight,{passive:true})}
@@ -123,7 +123,7 @@
   window.addEventListener('orientationchange',applyOrientationMode);window.addEventListener('resize',applyOrientationMode);applyOrientationMode();
 
   var canvas=document.getElementById('game');var ctx=canvas.getContext('2d');var W=canvas.width,H=canvas.height;var GROUND_Y=H-32;
-  function resizeCanvas(){var rect=canvas.parentElement.getBoundingClientRect();var cssW=Math.max(320,Math.floor(rect.width));var cssH=Math.max(220,Math.floor(rect.height*0.75));var dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';canvas.width=Math.round(cssW*dpr);canvas.height=Math.round(cssH*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);W=cssW;H=cssH;GROUND_Y=H-32}
+  function resizeCanvas(){var rect=canvas.parentElement.getBoundingClientRect();var cssW=Math.max(320,Math.floor(rect.width));var cssH=Math.max(220,Math.floor(Math.min(rect.height,window.innerHeight)*0.75));var dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';canvas.width=Math.round(cssW*dpr);canvas.height=Math.round(cssH*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);W=cssW;H=cssH;GROUND_Y=H-32}
   window.addEventListener('resize',resizeCanvas);
 
   var bgTile=new Image();bgTile.src="assets/background.png";var bgOffset=0;
@@ -214,9 +214,10 @@
       if(window.Telegram&&window.Telegram.WebApp){
         var payload={type:'lead',profile:profile,best:best,ts:Date.now()};
         window.Telegram.WebApp.sendData(JSON.stringify(payload));
+        try{window.Telegram.WebApp.close()}catch(_){}
         console.log('sendData at finish:', payload);
       }
-    }catch(e){console.error('sendData error',e)}
+    }catch(e){}
     resultOverlay.style.display='flex'
   }
   function getPrize(p){if(p>=70)return'Термос';if(p>=50)return'Шоппер';if(p>=30)return'Блокнот и ручка';if(p>=20)return'Брелок';return'—'}
@@ -245,7 +246,7 @@
       if(window.Telegram&&window.Telegram.WebApp){
         var payload={type:'lead',profile:{lastName:'Тест',firstName:'Кнопка',middleName:'',phone:'+79990000000',email:'test@example.com'},best:42,ts:Date.now()};
         window.Telegram.WebApp.sendData(JSON.stringify(payload));
-        try{window.Telegram.WebApp.showPopup({title:'OK',message:'sendData отправлен',buttons:[{type:'ok'}]})}catch(_){}
+        try{window.Telegram.WebApp.close()}catch(_){}
         console.log('sendData(test):',payload);
       }else{
         alert('Это окно НЕ внутри Telegram. Откройте игру по кнопке бота.');
