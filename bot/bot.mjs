@@ -1,39 +1,5 @@
 import 'dotenv/config'
 import fs from 'fs'
-import { Bot, InlineKeyboard } from 'grammy'
-
-const bot = new Bot(process.env.BOT_TOKEN)
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID
-const LEADS_FILE = './bot/leads.csv'
-
-if (!fs.existsSync(LEADS_FILE)) {
-  fs.writeFileSync(LEADS_FILE, 'Дата,Фамилия,Имя,Отчество,Телефон,Email,Очки,Приз,Завершено\n', 'utf8')
-}
-
-bot.command('start', ctx => {
-  const kb = new InlineKeyboard().webApp('Открыть игру', process.env.WEBAPP_URL)
-  ctx.reply('Нажмите кнопку, чтобы открыть игру:', { reply_markup: kb })
-})
-
-bot.command('id', ctx => ctx.reply(`Ваш chat_id: ${ctx.chat.id}`))
-
-bot.on('message:web_app_data', async ctx => {
-  try {
-    const raw = ctx.message.web_app_data.data || '{}'
-    const data = JSON.parse(raw)
-    const isLead = data.type === 'lead' || data.type === 'session_result'
-    if (!isLead) {
-      await ctx.reply('Пришли данные неизвестного типа, жду "lead" или "session_result".')
-      return
-    }
-
-    const p = data.profile || {}
-    const best = Number(data.best || 0)
-    const prize = getPrize(best)
-    const endedAt = data.endedAt || new Date().toISOString()
-
-  import 'dotenv/config'
-import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { Bot, InlineKeyboard } from 'grammy'
