@@ -240,8 +240,6 @@
       if(window.Telegram&&window.Telegram.WebApp){
         var payload={type:'lead',profile:profile,best:best,ts:Date.now()}
         window.Telegram.WebApp.sendData(JSON.stringify(payload))
-        try{window.Telegram.WebApp.close()}catch(_){}
-        console.log('sendData at finish:', payload)
       }
     }catch(e){}
     resultOverlay.style.display='flex'
