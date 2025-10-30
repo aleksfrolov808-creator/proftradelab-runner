@@ -29,18 +29,15 @@
     .rotate-hint{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.9);color:#ffffff;z-index:10000;text-align:center;padding:16px;border:3px solid var(--brand)}
     .rotate-hint.show{display:flex}
     #regOverlay .panel,#resultOverlay .panel{background:#ffffff;border:2px solid #e5e5e5;box-shadow:0 6px 28px rgba(0,0,0,.18)}
-    #regOverlay h2,#resultOverlay h2,#regOverlay label,#resultOverlay p,#regOverlay .note,#regOverlay .prizes h3,#regOverlay .prizes,#resultOverlay{color:#000000}
+    #regOverlay h2,#resultOverlay h2,#regOverlay label,#resultOverlay p,#regOverlay .note,#resultOverlay{color:#000000}
     #regOverlay input[type="text"],#regOverlay input[type="tel"],#regOverlay input[type="email"]{width:100%;background:#ffffff;border:2px solid #e5e5e5;color:#000000;padding:8px;border-radius:6px;margin-top:4px}
     #regOverlay .checkbox{color:#000000}
-    #regOverlay .prizes{background:#ffffff;border:2px solid #e5e5e5;border-radius:10px;padding:12px}
-    #regOverlay .prizes h3{margin:0 0 10px;font-size:16px}
-    #regOverlay .prize-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed #e5e5e5}
-    #regOverlay .prize-row:last-child{border-bottom:none}
-    #regOverlay .prize-points{font-weight:700}
-    #regOverlay .prize-badge{padding:6px 10px;border-radius:999px;border:2px solid #53B5AF;background:#f2fbfa;color:#000000;font-weight:700;font-size:12px;white-space:nowrap}
     #regOverlay .note{color:#444444}
     #regOverlay .btn.brand,#resultOverlay .btn.brand{background:rgb(83,181,175);color:#000000;border-color:transparent}
     #resultOverlay b{color:#000000}
+    .qrbox{background:#ffffff;border:2px solid #e5e5e5;border-radius:10px;padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+    .qrbox img{max-width:260px;width:100%;height:auto;display:block}
+    .qrbox small{color:#333;text-align:center;line-height:1.3}
   </style>
 </head>
 <body>
@@ -72,17 +69,19 @@
             <div style="margin-top:12px;text-align:right"><button id="startBtn" class="btn brand">Продолжить</button></div>
             <div id="regErr" style="color:#d50000;margin-top:6px"></div>
           </div>
-          <div class="prizes">
-            <h3>Призы и очки</h3>
-            <div class="prize-row"><div class="prize-points">20–30</div><div class="prize-badge">Брелок</div></div>
-            <div class="prize-row"><div class="prize-points">30–50</div><div class="prize-badge">Блокнот и ручка</div></div>
-            <div class="prize-row"><div class="prize-points">50–70</div><div class="prize-badge">Шоппер</div></div>
-            <div class="prize-row"><div class="prize-points">70+</div><div class="prize-badge">Термос</div></div>
-            <div class="note" style="margin-top:8px">Очки — лучший результат за 2 минуты.</div>
+
+          <!-- QR вместо списка призов -->
+          <div class="qrbox">
+            <picture>
+              <source srcset="assets/qr_group.svg" type="image/svg+xml">
+              <img src="assets/qr_group.jpg" alt="QR-код: подписка на группу Telegram">
+            </picture>
+            <small>Отсканируйте QR, чтобы присоединиться к нашей группе в Telegram и не пропустить розыгрыши и новости.</small>
           </div>
         </div>
       </div>
     </div>
+
     <div id="resultOverlay" class="overlay">
       <div class="panel">
         <div class="inner" style="grid-template-columns:1fr">
@@ -98,6 +97,7 @@
     </div>
   </div>
   <div id="rotateHint" class="rotate-hint"><div><div style="font-size:18px;margin-bottom:8px">Поверните устройство</div></div></div>
+
 <script>
 (function(){
   try{if(window.Telegram&&window.Telegram.WebApp){window.Telegram.WebApp.expand();window.Telegram.WebApp.setBackgroundColor("#000000");window.Telegram.WebApp.setHeaderColor("secondary_bg_color")}}catch(e){}
@@ -132,7 +132,14 @@
   var SPRITES={HIGH:loadImg2("assets/obstacle_high.png"),WIDE:loadImg2("assets/obstacle_wide.png"),MEDIUM:loadImg2("assets/obstacle_medium.png"),FLY:loadImg2("assets/obstacle_fly.png")};
   var obstacles=[];var spawnTimer=0;var lastType=-1;
   function chooseTypeNoRepeat(){var pool=[0,1,2,3];if(lastType!==-1){pool=pool.filter(function(t){return t!==lastType})}var t=pool[Math.floor(Math.random()*pool.length)];lastType=t;return t}
-  function spawnObstacle(){var type=chooseTypeNoRepeat();var w,h,y,sprite;if(type===0){w=56;h=56;sprite=SPRITES.MEDIUM;y=GROUND_Y-h}else if(type===1){w=96;h=56;sprite=SPRITES.WIDE;y=GROUND_Y-h}else if(type===2){w=52;h=104;sprite=SPRITES.HIGH;y=GROUND_Y-h}else{w=64;h=40;sprite=SPRITES.FLY;y=GROUND_Y-90-h;if(y<16)y=16}obstacles.push({x:W+10,y:y,w:w,h:h,sprite:sprite,passed:false,type:type})}
+  function spawnObstacle(){
+    var type=chooseTypeNoRepeat();var w,h,y,sprite;
+    if(type===0){w=52;h=52;sprite=SPRITES.MEDIUM;y=GROUND_Y-h}
+    else if(type===1){w=88;h=52;sprite=SPRITES.WIDE;y=GROUND_Y-h}
+    else if(type===2){w=48;h=96;sprite=SPRITES.HIGH;y=GROUND_Y-h}
+    else{w=60;h=36;sprite=SPRITES.FLY;y=GROUND_Y-90-h;if(y<16)y=16}
+    obstacles.push({x:W+10,y:y,w:w,h:h,sprite:sprite,passed:false,type:type})
+  }
   var OB_HIT_W=0.85,OB_HIT_H=0.80;var PL_HIT_W=0.80,PL_HIT_H=0.90;var OB_HIGH_HIT_W=0.78,OB_HIGH_HIT_H=0.70;
   function playerHitbox(p){var w=p.w*PL_HIT_W,h=p.h*PL_HIT_H;var x=p.x+(p.w-w)/2;var y=p.y+(p.h-h);return{x:x,y:y,w:w,h:h}}
   function obstacleHitbox(o){var w,h;if(o.type===2){w=o.w*OB_HIGH_HIT_W;h=o.h*OB_HIGH_HIT_H}else{w=o.w*OB_HIT_W;h=o.h*OB_HIT_H}var x=o.x+(o.w-w)/2;var isAir=o.y<(GROUND_Y-o.h);var y=isAir?(o.y+(o.h-h)/2):(o.y+(o.h-h));return{x:x,y:y,w:w,h:h}}
@@ -203,6 +210,7 @@
 })();
 </script>
 
+<!-- Кнопка тестовой отправки (оставил на случай проверки; можно удалить) -->
 <script>
 (function(){
   function sendTest(){
