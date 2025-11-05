@@ -10,7 +10,6 @@
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;font-family:monospace;background:var(--bg);color:var(--text)}
     #app-root{position:relative;width:100%;min-height:var(--app-height);display:flex}
-    .portrait-force-landscape #app-root{position:fixed;inset:0;transform:rotate(90deg);transform-origin:top left;width:calc(var(--app-height));height:100vw;overflow:hidden;z-index:1}
     .wrap{flex:1;display:flex}
     .card{flex:1;display:flex;flex-direction:column;background:var(--card);border:3px solid var(--brand);image-rendering:pixelated;box-shadow:0 0 18px rgba(83,181,175,.35)}
     h1{font-size:20px;margin:0;padding:10px var(--pad);display:flex;align-items:center;gap:10px;background:linear-gradient(45deg, rgba(83,181,175,.10), rgba(83,181,175,.10));border-bottom:1px solid rgba(83,181,175,.35);color:var(--text)}
@@ -18,276 +17,147 @@
     canvas{display:block;width:100%;height:auto;background:#000000;image-rendering:pixelated;touch-action:manipulation;-webkit-user-select:none;user-select:none}
     .bar{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:8px var(--pad);flex-wrap:wrap}
     .hint{font-size:12px;color:var(--muted)}
-    .btn{background:#000000;color:var(--text);border:2px solid var(--brand);padding:8px 12px;cursor:pointer;border-radius:8px}
-    .btn:active{background:var(--brand);color:#000000}
-    .btn.brand{background:var(--brand);color:#000000;border-color:transparent}
+    .btn{background:#000;color:var(--text);border:2px solid var(--brand);padding:8px 12px;cursor:pointer;border-radius:8px}
+    .btn.brand{background:var(--brand);color:#000;border-color:transparent}
     .overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:16px;z-index:999;height:var(--app-height)}
-    .panel{background:#000000;border:3px solid var(--brand);border-radius:10px;box-shadow:0 0 18px rgba(83,181,175,.35);width:100%;max-width:860px;max-height:calc(var(--app-height) - 32px);display:flex;flex-direction:column}
+    .panel{background:#000;border:3px solid var(--brand);border-radius:10px;box-shadow:0 0 18px rgba(83,181,175,.35);width:100%;max-width:860px;max-height:calc(var(--app-height) - 32px);display:flex;flex-direction:column}
     .panel .inner{display:grid;gap:14px;padding:16px;grid-template-columns:1fr 320px;overflow:auto}
     @media (max-width:740px){.panel .inner{grid-template-columns:1fr}}
-    .field{margin:6px 0}
-    .rotate-hint{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.9);color:#ffffff;z-index:10000;text-align:center;padding:16px;border:3px solid var(--brand)}
-    .rotate-hint.show{display:flex}
-    #regOverlay .panel,#resultOverlay .panel{background:#ffffff;border:2px solid #e5e5e5;box-shadow:0 6px 28px rgba(0,0,0,.18)}
-    #regOverlay h2,#resultOverlay h2,#regOverlay label,#resultOverlay p,#regOverlay .note,#resultOverlay{color:#000000}
-    #regOverlay input[type="text"],#regOverlay input[type="tel"],#regOverlay input[type="email"]{width:100%;background:#ffffff;border:2px solid #e5e5e5;color:#000000;padding:8px;border-radius:6px;margin-top:4px}
-    #regOverlay .checkbox{color:#000000}
-    #regOverlay .note{color:#444444}
-    #regOverlay .btn.brand,#resultOverlay .btn.brand{background:rgb(83,181,175);color:#000000;border-color:transparent}
-    #resultOverlay b{color:#000000}
-    .qrbox{background:#ffffff;border:2px solid #e5e5e5;border-radius:10px;padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+    #regOverlay .panel,#resultOverlay .panel{background:#fff;border:2px solid #e5e5e5;box-shadow:0 6px 28px rgba(0,0,0,.18)}
+    #regOverlay input{width:100%;background:#fff;border:2px solid #e5e5e5;color:#000;padding:8px;border-radius:6px;margin-top:4px}
+    #regOverlay .checkbox{color:#000}
+    .qrbox{background:#fff;border:2px solid #e5e5e5;border-radius:10px;padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
     .qrbox img{max-width:260px;width:100%;height:auto;display:block}
     .qrbox small{color:#333;text-align:center;line-height:1.3}
   </style>
 </head>
 <body>
-  <div id="app-root">
-    <div class="wrap">
-      <div class="card">
-        <h1>🧪 ПрофТрейдЛаб 8-bit Runner</h1>
-        <div class="gameBox">
-          <canvas id="game" width="1200" height="400"></canvas>
-          <div class="bar">
-            <div>Очки: <span id="score">0</span> · Рекорд: <span id="best">0</span> · Осталось: <span id="timeLeft">02:00</span><div class="hint">Управление: Space / ⬆︎ / Тап · Двойной прыжок — второй слабее</div></div>
-            <div style="display:flex;gap:8px"><button id="restart" class="btn">Заново</button><button id="newSession" class="btn brand">Регистрация</button></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Регистрация -->
-    <div id="regOverlay" class="overlay" style="display:flex">
-      <div class="panel">
-        <div class="inner">
-          <div>
-            <h2>Регистрация</h2>
-            <div class="field"><label>Фамилия *</label><input id="lastName" type="text" required></div>
-            <div class="field"><label>Имя *</label><input id="firstName" type="text" required></div>
-            <div class="field"><label>Отчество <span class="note">(необязательно)</span></label><input id="middleName" type="text"></div>
-            <div class="field"><label>Телефон *</label><input id="phone" type="tel" placeholder="+7 900 000-00-00"></div>
-            <div class="field"><label>Email</label><input id="email" type="email" placeholder="name@example.com"></div>
-            <label class="checkbox"><input id="consent" type="checkbox"> Согласен на обработку персональных данных</label>
-            <div class="note">Данные нужны для выдачи приза и связи с вами.</div>
-            <div style="margin-top:12px;text-align:right"><button id="startBtn" class="btn brand">Продолжить</button></div>
-            <div id="regErr" style="color:#d50000;margin-top:6px"></div>
-          </div>
-
-          <!-- QR справа -->
-          <div class="qrbox">
-            <picture>
-              <source srcset="assets/qr_group.svg" type="image/svg+xml">
-              <img src="assets/qr_group.png" alt="QR-код для подписки на группу">
-            </picture>
-            <small>Отсканируйте QR, чтобы присоединиться к нашей группе в Telegram и не пропустить розыгрыши и новости.<br>
-            Если QR не отображается, <a id="groupLink" href="#" target="_blank" rel="noopener">перейдите по ссылке</a>.</small>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Результаты -->
-    <div id="resultOverlay" class="overlay">
-      <div class="panel">
-        <div class="inner" style="grid-template-columns:1fr">
-          <div>
-            <h2>Сессия завершена</h2>
-            <p>Ваш лучший результат: <b id="finalBest">0</b> очков.</p>
-            <p>Вы выиграли: <b id="prizeText">—</b></p>
-            <p>Пожалуйста, обратитесь к администратору за призом.</p>
-            <div style="margin-top:12px;text-align:right"><button id="resultOk" class="btn brand">Новая регистрация</button></div>
-          </div>
+<div id="app-root">
+  <div class="wrap">
+    <div class="card">
+      <h1>🧪 ПрофТрейдЛаб 8-bit Runner</h1>
+      <div class="gameBox">
+        <canvas id="game" width="1200" height="400"></canvas>
+        <div class="bar">
+          <div>Очки: <span id="score">0</span> · Рекорд: <span id="best">0</span> · Осталось: <span id="timeLeft">02:00</span><div class="hint">Space / ⬆︎ / Тап · Двойной прыжок — слабее</div></div>
+          <div style="display:flex;gap:8px"><button id="restart" class="btn">Заново</button><button id="newSession" class="btn brand">Регистрация</button></div>
         </div>
       </div>
     </div>
   </div>
 
-  <div id="rotateHint" class="rotate-hint"><div><div style="font-size:18px;margin-bottom:8px">Поверните устройство</div></div></div>
+  <!-- Форма -->
+  <div id="regOverlay" class="overlay" style="display:flex">
+    <div class="panel">
+      <div class="inner">
+        <div>
+          <h2>Регистрация</h2>
+          <div><label>Фамилия *</label><input id="lastName" type="text" required></div>
+          <div><label>Имя *</label><input id="firstName" type="text" required></div>
+          <div><label>Отчество</label><input id="middleName" type="text"></div>
+          <div><label>Телефон *</label><input id="phone" type="tel" placeholder="+7 900 000-00-00"></div>
+          <div><label>Email</label><input id="email" type="email" placeholder="name@example.com"></div>
+          <label class="checkbox"><input id="consent" type="checkbox"> Согласен на обработку данных</label>
+          <div style="text-align:right;margin-top:12px"><button id="startBtn" class="btn brand">Продолжить</button></div>
+          <div id="regErr" style="color:#d50000;margin-top:6px"></div>
+        </div>
+        <div class="qrbox">
+          <img src="assets/qr_group.jpg" alt="QR">
+          <small>Отсканируйте QR, чтобы присоединиться к нашей группе в Telegram и не пропустить розыгрыши и новости.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Результаты -->
+  <div id="resultOverlay" class="overlay">
+    <div class="panel">
+      <div class="inner" style="grid-template-columns:1fr">
+        <div>
+          <h2>Сессия завершена</h2>
+          <p>Ваш лучший результат: <b id="finalBest">0</b> очков.</p>
+          <p>Вы выиграли: <b id="prizeText">—</b></p>
+          <p>Спасибо за участие!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
-  try{
-    if(window.Telegram&&window.Telegram.WebApp){
-      window.Telegram.WebApp.expand();
-      window.Telegram.WebApp.setBackgroundColor("#000000");
-      window.Telegram.WebApp.setHeaderColor("secondary_bg_color");
-      // укажи ссылку на группу, чтобы работала подсказка под QR
-      var tgLink = (window.Telegram.WebApp.initDataUnsafe?.start_param && /^https?:/.test(window.Telegram.WebApp.initDataUnsafe.start_param))
-        ? window.Telegram.WebApp.initDataUnsafe.start_param
-        : "https://t.me/your_group_here";
-      var a=document.getElementById('groupLink'); if(a) a.href=tgLink;
-    }
-  }catch(e){}
-  if(!window.Telegram||!window.Telegram.WebApp){
-    alert('Игра открыта НЕ из Telegram. Отправка результатов работать не будет. Откройте игру по кнопке бота.');
-    var a=document.getElementById('groupLink'); if(a) a.href="https://t.me/your_group_here";
-  }
+  const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+  let W=canvas.width,H=canvas.height,GROUND_Y=H-32;
+  const scoreEl=document.getElementById('score'),bestEl=document.getElementById('best'),timeEl=document.getElementById('timeLeft');
+  let worldSpeed=6,score=0,best=0,gameOver=false,ready=false,runStart=0,sessionEndAt=null,timerId=null;
+  let raf=null;
+  const player={x:50,y:GROUND_Y-56,w:56,h:56,vy:0,onGround:true,jumpCount:0};
+  const GRAVITY=0.85,JUMP_V1=-12,JUMP_V2=-9.5;
+  const SPAWN_MIN=340,SPAWN_VAR=300;
+  const obstacles=[];
+  const OB_HIT_W=0.7,OB_HIT_H=0.65,PL_HIT_W=0.75,PL_HIT_H=0.85; // уменьшенные хитбоксы
 
-  function setAppHeight(){var vh=(window.visualViewport&&window.visualViewport.height)?window.visualViewport.height:window.innerHeight;document.documentElement.style.setProperty('--app-height',vh+'px')}
-  setAppHeight();window.addEventListener('resize',setAppHeight);if(window.visualViewport){window.visualViewport.addEventListener('resize',setAppHeight,{passive:true})}
-  var root=document.documentElement;var rotateHint=document.getElementById('rotateHint');
-  function applyOrientationMode(){var portrait=(window.innerHeight>window.innerWidth);if(portrait){root.classList.add('portrait-force-landscape');if(rotateHint)rotateHint.classList.add('show')}else{root.classList.remove('portrait-force-landscape');if(rotateHint)rotateHint.classList.remove('show')}if(typeof resizeCanvas==='function')setTimeout(resizeCanvas,50)}
-  window.addEventListener('orientationchange',applyOrientationMode);window.addEventListener('resize',applyOrientationMode);applyOrientationMode();
+  function aabb(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
+  function playerHB(p){return{x:p.x+(p.w*(1-PL_HIT_W)/2),y:p.y+(p.h*(1-PL_HIT_H)),w:p.w*PL_HIT_W,h:p.h*PL_HIT_H}}
+  function obstacleHB(o){return{x:o.x+(o.w*(1-OB_HIT_W)/2),y:o.y+(o.h*(1-OB_HIT_H)),w:o.w*OB_HIT_W,h:o.h*OB_HIT_H}}
 
-  var canvas=document.getElementById('game');var ctx=canvas.getContext('2d');var W=canvas.width,H=canvas.height;var GROUND_Y=H-32;
-  function resizeCanvas(){var rect=canvas.parentElement.getBoundingClientRect();var cssW=Math.max(320,Math.floor(rect.width));var cssH=Math.max(220,Math.floor(rect.height*0.75));var dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';canvas.width=Math.round(cssW*dpr);canvas.height=Math.round(cssH*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);W=cssW;H=cssH;GROUND_Y=H-32}
-  window.addEventListener('resize',resizeCanvas);
+  function resize(){const r=canvas.parentElement.getBoundingClientRect();const w=r.width,h=r.height*0.75;canvas.style.width=w+'px';canvas.style.height=h+'px';canvas.width=w;canvas.height=h;W=w;H=h;GROUND_Y=H-32}
+  window.addEventListener('resize',resize);resize();
 
-  var bgTile=new Image();bgTile.src="assets/background.png";var bgOffset=0;
-  function drawBackground(){if(!bgTile.complete){ctx.fillStyle="#000000";ctx.fillRect(0,0,W,H);return}var scale=H/bgTile.height;var tileW=Math.ceil(bgTile.width*scale);var speed=worldSpeed*0.5;bgOffset=(bgOffset-speed);if(bgOffset<=-tileW)bgOffset+=tileW;for(var x=-tileW;x<W+tileW;x+=tileW){ctx.drawImage(bgTile,x+bgOffset,0,tileW,H)}}
-  function loadImg(src){var im=new Image();im.src=src;return im}
-  var DECOS=[{img:loadImg("assets/deco_clock.png"),w:64,h:64,weight:2},{img:loadImg("assets/deco_panel.png"),w:80,h:80,weight:3},{img:loadImg("assets/deco_console.png"),w:72,h:72,weight:1}];
-  var bgDecos=[];var MAX_DECOS_ON_SCREEN=6;var decoTimer=0,decoIntervalMin=1800,decoIntervalVar=2200;
-  function pickDecoByWeight(){var total=DECOS.reduce(function(s,d){return s+d.weight},0);var r=Math.random()*total;for(var i=0;i<DECOS.length;i++){r-=DECOS[i].weight;if(r<=0)return DECOS[i]}return DECOS[0]}
-  function randomWallY(){var top=Math.round(H*0.20),bottom=Math.round(H*0.45);return Math.floor(top+Math.random()*(bottom-top))}
-  function scheduleNextDeco(){decoTimer=(performance&&performance.now?performance.now():Date.now())+decoIntervalMin+Math.random()*decoIntervalVar}
-  function updateDecoSpawner(now){if(bgDecos.length>=MAX_DECOS_ON_SCREEN)return;if(now>=decoTimer){var t=pickDecoByWeight();var scale=0.85+Math.random()*0.4;bgDecos.push({x:W+40,y:randomWallY(),w:Math.round(t.w*scale),h:Math.round(t.h*scale),img:t.img});scheduleNextDeco()}}
-  function drawDecos(){var bgSpeed=worldSpeed*0.5;for(var i=bgDecos.length-1;i>=0;i--){var d=bgDecos[i];d.x-=bgSpeed;if(d.img&&d.img.complete){ctx.imageSmoothingEnabled=false;ctx.drawImage(d.img,d.x,d.y,d.w,d.h)}if(d.x<-d.w-20)bgDecos.splice(i,1)}}
+  function spawnObs(){const h=40+Math.random()*40,w=30+Math.random()*60;obstacles.push({x:W+10,y:GROUND_Y-h,w,h,passed:false})}
+  let st=0;
+  function jump(){if(gameOver||!ready)return;if(player.onGround){player.vy=JUMP_V1;player.onGround=false;player.jumpCount=1;st=Date.now();return}
+    if(player.jumpCount===1 && Date.now()-st<350){player.vy=JUMP_V2;player.jumpCount=2;}}
+  window.addEventListener('keydown',e=>{if(['Space','ArrowUp'].includes(e.code)){e.preventDefault();jump();}});
+  canvas.addEventListener('pointerdown',jump);
 
-  var playerSprites={run:[Object.assign(new Image(),{src:"assets/player_run1.png"}),Object.assign(new Image(),{src:"assets/player_run2.png"})],jump:Object.assign(new Image(),{src:"assets/player_jump.png"})};
-  var RUN_FRAME_MS=140,playerAnimTimerMs=0,playerAnimFrame=0,lastFrameTs=(performance&&performance.now)?performance.now():Date.now();
-  function drawPlayer(){var inAir=!player.onGround;if(inAir){var imgJ=playerSprites.jump;if(imgJ&&imgJ.complete)ctx.drawImage(imgJ,player.x,player.y,player.w,player.h)}else{var now=(performance&&performance.now)?performance.now():Date.now();var dt=Math.min(100,now-lastFrameTs);lastFrameTs=now;playerAnimTimerMs+=dt;if(playerAnimTimerMs>=RUN_FRAME_MS){playerAnimTimerMs-=RUN_FRAME_MS;playerAnimFrame=(playerAnimFrame+1)%2}var imgR=playerSprites.run[playerAnimFrame];if(imgR&&imgR.complete)ctx.drawImage(imgR,player.x,player.y,player.w,player.h)}}
-
-  var GRAVITY=0.85,JUMP_VEL1=-12.2,JUMP_VEL2=-9.5,JUMP2_WINDOW_MS=400,JUMP2_MIN_UP_VY=1;
-  var TARGET_END_SPEED=11.8,SESSION_LEN_S=120,SPEED_START=5.76,SPEED_ACCEL=(TARGET_END_SPEED-SPEED_START)/SESSION_LEN_S;
-  var SPAWN_MIN=340,SPAWN_VAR=300;
-  var worldSpeed=SPEED_START,score=0,best=0,gameOver=false,ready=false,runStart=Date.now();var rafId=null;
-
-  var player={x:50,y:GROUND_Y-56,w:56,h:56,vy:0,onGround:true,jumpCount:0,maxJumps:2,firstJumpAt:0};
-
-  function loadImg2(src){var im=new Image();im.src=src;return im}
-  var SPRITES={HIGH:loadImg2("assets/obstacle_high.png"),WIDE:loadImg2("assets/obstacle_wide.png"),MEDIUM:loadImg2("assets/obstacle_medium.png"),FLY:loadImg2("assets/obstacle_fly.png")};
-
-  var obstacles=[];var spawnTimer=0;var lastType=-1;
-  function chooseTypeNoRepeat(){var pool=[0,1,2,3];if(lastType!==-1){pool=pool.filter(function(t){return t!==lastType})}var t=pool[Math.floor(Math.random()*pool.length)];lastType=t;return t}
-  function spawnObstacle(){
-    var type=chooseTypeNoRepeat();var w,h,y,sprite;
-    if(type===0){w=52;h=52;sprite=SPRITES.MEDIUM;y=GROUND_Y-h}
-    else if(type===1){w=88;h=52;sprite=SPRITES.WIDE;y=GROUND_Y-h}
-    else if(type===2){w=48;h=96;sprite=SPRITES.HIGH;y=GROUND_Y-h}
-    else{w=60;h=36;sprite=SPRITES.FLY;y=GROUND_Y-90-h;if(y<16)y=16}
-    obstacles.push({x:W+10,y:y,w:w,h:h,sprite:sprite,passed:false,type:type})
-  }
-
-  var OB_HIT_W=0.85,OB_HIT_H=0.80;var PL_HIT_W=0.80,PL_HIT_H=0.90;var OB_HIGH_HIT_W=0.78,OB_HIGH_HIT_H=0.70;
-  function playerHitbox(p){var w=p.w*PL_HIT_W,h=p.h*PL_HIT_H;var x=p.x+(p.w-w)/2;var y=p.y+(p.h-h);return{x:x,y:y,w:w,h:h}}
-  function obstacleHitbox(o){var w,h;if(o.type===2){w=o.w*OB_HIGH_HIT_W;h=o.h*OB_HIGH_HIT_H}else{w=o.w*OB_HIT_W;h=o.h*OB_HIT_H}var x=o.x+(o.w-w)/2;var isAir=o.y<(GROUND_Y-o.h);var y=isAir?(o.y+(o.h-h)/2):(o.y+(o.h-h));return{x:x,y:y,w:w,h:h}}
-  function rectsOverlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
-
-  function sessionActive(){return sessionEndAt&&Date.now()<sessionEndAt}
-
-  // ВАЖНО: не перехватывать клавиатуру, когда открыта форма/результаты или фокус в input
-  function uiOpen(){return regOverlay.style.display==='flex' || resultOverlay.style.display==='flex'}
-  function isTypingTarget(el){if(!el) return false;var t=el.tagName;return t==='INPUT'||t==='TEXTAREA'||t==='SELECT'||el.isContentEditable}
-
-  function jump(){if(gameOver||!sessionActive()||!ready)return;if(player.onGround){player.vy=JUMP_VEL1;player.onGround=false;player.jumpCount=1;player.firstJumpAt=Date.now();return}var since=Date.now()-player.firstJumpAt;if(player.jumpCount===1&&since<=JUMP2_WINDOW_MS&&player.vy<JUMP2_MIN_UP_VY){player.vy=JUMP_VEL2;player.jumpCount=2}}
-
-  window.addEventListener('keydown',function(e){
-    if(uiOpen() || isTypingTarget(e.target)) return;
-    if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();jump()}
-    if(e.code==='Enter'&&(gameOver||!sessionActive())) startCountdown(function(){resetRun()})
-  }, {passive:false});
-
-  canvas.addEventListener('pointerdown',function(ev){
-    if(uiOpen()) return;
-    jump();
-  });
-
-  function loop(){if(rafId)cancelAnimationFrame(rafId);rafId=requestAnimationFrame(update)}
   function update(){
-    drawBackground();updateDecoSpawner((performance&&performance.now?performance.now():Date.now()));drawDecos();
-    var grd=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);grd.addColorStop(0,"#53B5AF");grd.addColorStop(1,"#53B5AF");ctx.fillStyle=grd;ctx.fillRect(0,GROUND_Y,W,2);
-    if(!sessionActive()){dimOverlay('Сессия завершена');return}
-    var elapsedSec=(Date.now()-runStart)/1000;worldSpeed=SPEED_START+SPEED_ACCEL*elapsedSec;
-    spawnTimer-=worldSpeed;if(spawnTimer<=0){spawnObstacle();var bonusGap=(Math.random()<0.18)?160:0;spawnTimer=SPAWN_MIN+Math.random()*SPAWN_VAR+bonusGap}
-    player.vy+=GRAVITY;player.y+=player.vy;if(player.y>=GROUND_Y-player.h){player.y=GROUND_Y-player.h;player.vy=0;if(!player.onGround){player.onGround=true;player.jumpCount=0}}else{player.onGround=false}
-    for(var i=obstacles.length-1;i>=0;i--){var o=obstacles[i];o.x-=worldSpeed;if(o.sprite&&o.sprite.complete){ctx.imageSmoothingEnabled=false;ctx.drawImage(o.sprite,o.x,o.y,o.w,o.h)}else{ctx.fillStyle='#53B5AF';ctx.fillRect(o.x,o.y,o.w,o.h)}if(o.x+o.w<0)obstacles.splice(i,1);if(!o.passed&&o.x+o.w<player.x){o.passed=true;score++;updateHud()}if(!gameOver&&rectsOverlap(playerHitbox(player),obstacleHitbox(o))){gameOver=true;if(score>best){best=score;updateHud()}}}
-    drawPlayer();
-    if(!ready){drawCountdown();return}
-    if(gameOver)return;
-    loop()
+    ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#53B5AF';ctx.fillRect(0,GROUND_Y,W,2);
+    if(Date.now()>sessionEndAt){showResults();return;}
+    player.vy+=GRAVITY;player.y+=player.vy;
+    if(player.y>=GROUND_Y-player.h){player.y=GROUND_Y-player.h;player.vy=0;player.onGround=true;player.jumpCount=0;}
+    for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];o.x-=worldSpeed;ctx.fillStyle='#53B5AF';ctx.fillRect(o.x,o.y,o.w,o.h);
+      if(o.x+o.w<0)obstacles.splice(i,1);
+      if(!o.passed && o.x+o.w<player.x){o.passed=true;score++;scoreEl.textContent=score;}
+      if(!gameOver && aabb(playerHB(player),obstacleHB(o))){gameOver=true;if(score>best){best=score;bestEl.textContent=best;}}}
+    ctx.fillStyle=gameOver?'#e33':'#fff';ctx.fillRect(player.x,player.y,player.w,player.h);
+    if(!gameOver){raf=requestAnimationFrame(update);}
   }
 
-  var scoreEl=document.getElementById('score');var bestEl=document.getElementById('best');var timeEl=document.getElementById('timeLeft');
-  document.getElementById('restart').onclick=function(){if(!sessionActive())return;startCountdown(function(){resetRun()})};
+  document.getElementById('restart').onclick=()=>{if(sessionActive())startGame();}
   document.getElementById('newSession').onclick=openReg;
-  function updateHud(){scoreEl.textContent=String(score);bestEl.textContent=String(best)}
+  function sessionActive(){return sessionEndAt&&Date.now()<sessionEndAt;}
+  function startGame(){score=0;gameOver=false;ready=true;runStart=Date.now();sessionEndAt=Date.now()+120000;obstacles.length=0;spawnObs();tick();update();}
+  function tick(){clearInterval(timerId);timerId=setInterval(()=>{const left=sessionEndAt-Date.now();if(left<=0){clearInterval(timerId);showResults();}timeEl.textContent=fmt(left);},200);}
+  const fmt=ms=>{const s=Math.ceil(ms/1000);return('0'+Math.floor(s/60)).slice(-2)+':'+('0'+s%60).slice(-2)}
 
-  var regOverlay=document.getElementById('regOverlay');var resultOverlay=document.getElementById('resultOverlay');var startBtn=document.getElementById('startBtn');var resultOk=document.getElementById('resultOk');var regErr=document.getElementById('regErr');var lastNameIn=document.getElementById('lastName');var firstNameIn=document.getElementById('firstName');var middleNameIn=document.getElementById('middleName');var phoneIn=document.getElementById('phone');var emailIn=document.getElementById('email');var consentIn=document.getElementById('consent');var finalBest=document.getElementById('finalBest');var prizeText=document.getElementById('prizeText');
-  var profile=null,sessionEndAt=null,timerId=null;
+  const reg=document.getElementById('regOverlay'),res=document.getElementById('resultOverlay');
+  const btn=document.getElementById('startBtn'),err=document.getElementById('regErr');
+  const f=document.getElementById('firstName'),l=document.getElementById('lastName'),m=document.getElementById('middleName'),ph=document.getElementById('phone'),em=document.getElementById('email'),cons=document.getElementById('consent');
+  let profile={};
 
-  function openReg(){regErr.textContent='';regOverlay.style.display='flex'}
-  function closeReg(){regOverlay.style.display='none'}
-  function normalizePhone(raw){if(!raw)return "";var d=raw.replace(/[^\d]/g,'');if(d.length===11&&d[0]==='8')d='7'+d.slice(1);if(d.length===10)d='7'+d;if(d.length===11&&d[0]==='7')return '+7'+d.slice(1);return ""}
-  function isEmailValid(v){if(!v)return true;return/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())}
-
-  startBtn.onclick=function(){
-    var lastName=lastNameIn.value.trim();var firstName=firstNameIn.value.trim();var middleName=middleNameIn.value.trim();var phoneRaw=phoneIn.value.trim();var email=emailIn.value.trim();
-    if(!lastName){regErr.textContent='Укажите фамилию';return}
-    if(!firstName){regErr.textContent='Укажите имя';return}
-    var phone=normalizePhone(phoneRaw);if(!phone){regErr.textContent='Некорректный телефон. Пример: +7 900 000-00-00';return}
-    if(!consentIn.checked){regErr.textContent='Нужно согласие на обработку персональных данных';return}
-    if(!isEmailValid(email)){regErr.textContent='Некорректный e-mail';return}
-    profile={lastName:lastName,firstName:firstName,middleName:middleName,phone:phone,email:email};
-    best=0;score=0;updateHud();
-    sessionEndAt=Date.now()+2*60*1000;
-    closeReg();
-    startCountdown(function(){resetRun();tickTimer()})
-  };
-
-  resultOk.onclick=function(){resultOverlay.style.display='none';openReg()};
-
-  function tickTimer(){clearInterval(timerId);timerId=setInterval(function(){var left=Math.max(0,(sessionEndAt||0)-Date.now());timeEl.textContent=fmt(left);if(left<=0){clearInterval(timerId);showResults()}},200)}
-  function fmt(ms){var s=Math.ceil(ms/1000),m=Math.floor(s/60),ss=('0'+(s%60)).slice(-2);return('0'+m).slice(-2)+':'+ss}
-
+  function openReg(){err.textContent='';reg.style.display='flex';}
+  function closeReg(){reg.style.display='none';}
+  btn.onclick=()=>{if(!l.value.trim())return err.textContent='Фамилия обязательна';
+    if(!f.value.trim())return err.textContent='Имя обязательно';
+    if(!cons.checked)return err.textContent='Нужно согласие';
+    profile={lastName:l.value,firstName:f.value,middleName:m.value,phone:ph.value,email:em.value};
+    closeReg();startGame();}
+  
   function showResults(){
-    finalBest.textContent=String(best);
-    prizeText.textContent=getPrize(best);
-    try{
-      if(window.Telegram&&window.Telegram.WebApp){
-        var payload={type:'lead',profile:profile,best:best,ts:Date.now(),endedAt:new Date().toISOString()};
-        window.Telegram.WebApp.sendData(JSON.stringify(payload));
-        try{window.Telegram.WebApp.showPopup({title:'Отправлено',message:'Результат отправлен администратору',buttons:[{type:'ok'}]})}catch(_){}
-      }
-    }catch(e){}
-    resultOverlay.style.display='flex'
+    document.getElementById('finalBest').textContent=best;
+    document.getElementById('prizeText').textContent=getPrize(best);
+    if(window.Telegram?.WebApp){
+      const data={type:'lead',profile,best,ts:Date.now(),endedAt:new Date().toISOString()};
+      window.Telegram.WebApp.sendData(JSON.stringify(data));
+    }
+    res.style.display='flex';
+    setTimeout(()=>{res.style.display='none';openReg();},2500); // автооткрытие формы
   }
 
-  function getPrize(p){if(p>=70)return'Термос';if(p>=50)return'Шоппер';if(p>=30)return'Блокнот и ручка';if(p>=20)return'Брелок';return'—'}
-  function startCountdown(cb){ready=false;var t=3;function step(){drawCountdown(t);if(t===0){ready=true;if(cb)cb();return}setTimeout(function(){t--;step()},500)}step()}
-  function drawCountdown(n){drawBackground();updateDecoSpawner((performance&&performance.now?performance.now():Date.now()));drawDecos();var g=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);g.addColorStop(0,'#53B5AF');g.addColorStop(1,'#53B5AF');ctx.fillStyle=g;ctx.fillRect(0,GROUND_Y,W,2);ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(0,0,W,H);ctx.font='bold 56px monospace';ctx.textAlign='center';ctx.fillStyle='#53B5AF';ctx.fillText((typeof n==='number')?n:' ',W/2,H/2)}
-  function dimOverlay(msg){ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,W,H);ctx.font='16px monospace';ctx.textAlign='center';ctx.fillStyle='#ffffff';ctx.fillText(msg,W/2,H/2)}
-  function resetRun(){runStart=Date.now();worldSpeed=SPEED_START;score=0;gameOver=false;player.y=GROUND_Y-player.h;player.vy=0;player.onGround=true;player.jumpCount=0;playerAnimTimerMs=0;playerAnimFrame=0;lastFrameTs=(performance&&performance.now)?performance.now():Date.now();obstacles.length=0;spawnTimer=0;bgDecos.length=0;bgOffset=0;scheduleNextDeco();if(rafId)cancelAnimationFrame(rafId);rafId=null;loop()}
-
-  // стартовый кадр + форс показываем форму
-  resizeCanvas();
-  document.getElementById('regOverlay').style.display='flex';
-  (function(){ctx.fillStyle='#000000';ctx.fillRect(0,0,W,H);var g=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);g.addColorStop(0,'#53B5AF');g.addColorStop(1,'#53B5AF');ctx.fillStyle=g;ctx.fillRect(0,GROUND_Y,W,2)})()
-
-  // служебные переменные игры
-  var ready=false, gameOver=false, runStart=Date.now();
-})();
-</script>
-
-<!-- Тестовая кнопка (можно удалить) -->
-<script>
-(function(){
-  function sendTest(){
-    try{
-      if(window.Telegram&&window.Telegram.WebApp){
-        window.Telegram.WebApp.sendData(JSON.stringify({type:'lead',test:true,at:new Date().toISOString()}));
-        try{window.Telegram.WebApp.showPopup({title:'OK',message:'sendData отправлен',buttons:[{type:'ok'}]})}catch(_){}
-      }else{
-        alert('Это окно НЕ внутри Telegram. Откройте игру по кнопке бота.')
-      }
-    }catch(e){alert('Ошибка sendData: '+e.message)}
-  }
-  var btn=document.createElement('button');
-  btn.textContent='Отправить тест';
-  btn.style.position='fixed';btn.style.right='10px';btn.style.bottom='10px';
-  btn.style.zIndex='99999';btn.style.padding='8px 12px';
-  btn.style.background='#53B5AF';btn.style.border='0';btn.style.borderRadius='8px';btn.style.color='#000';
-  btn.addEventListener('click',sendTest);
-  document.body.appendChild(btn);
+  const getPrize=p=>p>=70?'Термос':p>=50?'Шоппер':p>=30?'Блокнот и ручка':p>=20?'Брелок':'—';
+  openReg();
 })();
 </script>
 </body>
