@@ -30,16 +30,9 @@
     .rotate-hint{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.9);color:#ffffff;z-index:10000;text-align:center;padding:16px;border:3px solid var(--brand)}
     .rotate-hint.show{display:flex}
     #regOverlay .panel,#resultOverlay .panel{background:#ffffff;border:2px solid #e5e5e5;box-shadow:0 6px 28px rgba(0,0,0,.18)}
-    #regOverlay h2,#resultOverlay h2,#regOverlay label,#resultOverlay p,#regOverlay .note,#regOverlay .prizes h3,#regOverlay .призы,#resultOverlay{color:#000000}
     #regOverlay h2,#resultOverlay h2,#regOverlay label,#resultOverlay p,#regOverlay .note,#regOverlay .prizes h3,#resultOverlay{color:#000000}
     #regOverlay input[type="text"],#regOverlay input[type="tel"],#regOverlay input[type="email"]{width:100%;background:#ffffff;border:2px solid #e5e5e5;color:#000000;padding:8px;border-radius:6px;margin-top:4px}
     #regOverlay .checkbox{color:#000000}
-    #regOverlay .prizes{background:#ffffff;border:2px solid #e5e5e5;border-radius:10px;padding:12px}
-    #regOverlay .prizes h3{margin:0 0 10px;font-size:16px}
-    #regOverlay .prize-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed #e5e5e5}
-    #regOverlay .prize-row:last-child{border-bottom:none}
-    #regOverlay .prize-points{font-weight:700}
-    #regOverlay .prize-badge{padding:6px 10px;border-radius:999px;border:2px solid #53B5AF;background:#f2fbfa;color:#000000;font-weight:700;font-size:12px;white-space:nowrap}
     #regOverlay .qrbox{background:#ffffff;border:2px solid #e5e5e5;border-radius:10px;padding:12px;text-align:center}
     #regOverlay .qrbox h3{margin:0 0 10px;font-size:16px}
     #regOverlay .qrbox img{max-width:100%;height:auto;display:block;margin:8px auto;border-radius:8px;border:1px solid #e5e5e5;background:#fff}
@@ -79,13 +72,6 @@
             <div style="margin-top:12px;text-align:right"><button id="startBtn" class="btn brand">Продолжить</button></div>
             <div id="regErr" style="color:#d50000;margin-top:6px"></div>
           </div>
-          <div class="prizes">
-            <h3>Призы и очки</h3>
-            <div class="prize-row"><div class="prize-points">20–30</div><div class="prize-badge">Брелок</div></div>
-            <div class="prize-row"><div class="prize-points">30–50</div><div class="prize-badge">Блокнот и ручка</div></div>
-            <div class="prize-row"><div class="prize-points">50–70</div><div class="prize-badge">Шоппер</div></div>
-            <div class="prize-row"><div class="prize-points">70+</div><div class="prize-badge">Термос</div></div>
-            <div class="note" style="margin-top:8px">Очки — лучший результат за 2 минуты.</div>
           <div class="qrbox">
             <h3>Подписывайтесь на группу ПрофТрейдЛаб</h3>
             <img src="assets/qr_group.jpg" alt="QR код группы">
@@ -103,8 +89,6 @@
             <h2>Сессия завершена</h2>
             <p>Ваш лучший результат: <b id="finalBest">0</b> очков.</p>
             <p>Вы выиграли: <b id="prizeText">—</b></p>
-            <p>Пожалуйста, обратитесь к администратору за призом.</p>
-            <div style="margin-top:12px;text-align:right"><button id="resultOk" class="btn brand">Новая регистрация</button></div>
             <div class="result-actions">
               <button id="toReg" class="btn">К регистрации</button>
               <button id="sendLead" class="btn brand">Отправить администратору</button>
@@ -121,7 +105,6 @@
 (function(){
   var GROUP_URL='https://t.me/proftradelab';
   try{
-    if(window.Telegram && window.Telegram.WebApp){
     if(window.Telegram&&window.Telegram.WebApp){
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
@@ -129,7 +112,6 @@
       window.Telegram.WebApp.setHeaderColor("secondary_bg_color");
     }
   }catch(e){}
-
   function setAppHeight(){var vh=(window.visualViewport&&window.visualViewport.height)?window.visualViewport.height:window.innerHeight;document.documentElement.style.setProperty('--app-height',vh+'px')}
   setAppHeight();window.addEventListener('resize',setAppHeight);if(window.visualViewport){window.visualViewport.addEventListener('resize',setAppHeight,{passive:true})}
   var root=document.documentElement;var rotateHint=document.getElementById('rotateHint');
@@ -165,32 +147,10 @@
   var SPRITES={HIGH:loadImg2("assets/obstacle_high.png"),WIDE:loadImg2("assets/obstacle_wide.png"),MEDIUM:loadImg2("assets/obstacle_medium.png"),FLY:loadImg2("assets/obstacle_fly.png")};
   var obstacles=[];var spawnTimer=0;var lastType=-1;
   function chooseTypeNoRepeat(){var pool=[0,1,2,3];if(lastType!==-1){pool=pool.filter(function(t){return t!==lastType})}var t=pool[Math.floor(Math.random()*pool.length)];lastType=t;return t}
-  function spawnObstacle(){
-    var type=chooseTypeNoRepeat();var w,h,y,sprite
-    if(type===0){w=50;h=50;sprite=SPRITES.MEDIUM;y=GROUND_Y-h}
-    else if(type===1){w=86;h=50;sprite=SPRITES.WIDE;y=GROUND_Y-h}
-    else if(type===2){w=46;h=94;sprite=SPRITES.HIGH;y=GROUND_Y-h}
-    else{w=58;h=36;sprite=SPRITES.FLY;y=GROUND_Y-90-h;if(y<16)y=16}
-    obstacles.push({x:W+10,y:y,w:w,h:h,sprite:sprite,passed:false,type:type})
-  }
-
-  var OB_HIT_W=0.82,OB_HIT_H=0.78
-  var PL_HIT_W=0.80,PL_HIT_H=0.90
-  var OB_HIGH_HIT_W=0.75,OB_HIGH_HIT_H=0.66
   function spawnObstacle(){var type=chooseTypeNoRepeat();var w,h,y,sprite;if(type===0){w=50;h=50;sprite=SPRITES.MEDIUM;y=GROUND_Y-h}else if(type===1){w=86;h=50;sprite=SPRITES.WIDE;y=GROUND_Y-h}else if(type===2){w=46;h=94;sprite=SPRITES.HIGH;y=GROUND_Y-h}else{w=58;h=36;sprite=SPRITES.FLY;y=GROUND_Y-90-h;if(y<16)y=16}obstacles.push({x:W+10,y:y,w:w,h:h,sprite:sprite,passed:false,type:type})}
 
   var OB_HIT_W=0.82,OB_HIT_H=0.78,PL_HIT_W=0.80,PL_HIT_H=0.90,OB_HIGH_HIT_W=0.75,OB_HIGH_HIT_H=0.66;
   function playerHitbox(p){var w=p.w*PL_HIT_W,h=p.h*PL_HIT_H;var x=p.x+(p.w-w)/2;var y=p.y+(p.h-h);return{x:x,y:y,w:w,h:h}}
-  function obstacleHitbox(o){
-    var w,h
-    if(o.type===2){w=o.w*OB_HIGH_HIT_W;h=o.h*OB_HIGH_HIT_H}
-    else{w=o.w*OB_HIT_W;h=o.h*OB_HIT_H}
-    var x=o.x+(o.w-w)/2
-    var isAir=o.y<(GROUND_Y-o.h)
-    var y=isAir?(o.y+(o.h-h)/2):(o.y+(o.h-h))
-    return{x:x,y:y,w:w,h:h}
-  }
-
   function obstacleHitbox(o){var w,h;if(o.type===2){w=o.w*OB_HIGH_HIT_W;h=o.h*OB_HIGH_HIT_H}else{w=o.w*OB_HIT_W;h=o.h*OB_HIT_H}var x=o.x+(o.w-w)/2;var isAir=o.y<(GROUND_Y-o.h);var y=isAir?(o.y+(o.h-h)/2):(o.y+(o.h-h));return{x:x,y:y,w:w,h:h}}
   function rectsOverlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 
@@ -208,13 +168,6 @@
     if(spawnTimer<=0){spawnObstacle();var bonusGap=(Math.random()<0.18)?160:0;spawnTimer=SPAWN_MIN+Math.random()*SPAWN_VAR+bonusGap}
     player.vy+=GRAVITY;player.y+=player.vy
     if(player.y>=GROUND_Y-player.h){player.y=GROUND_Y-player.h;player.vy=0;if(!player.onGround){player.onGround=true;player.jumpCount=0}}else{player.onGround=false}
-    for(var i=obstacles.length-1;i>=0;i--){
-      var o=obstacles[i];o.x-=worldSpeed
-      if(o.sprite&&o.sprite.complete){ctx.imageSmoothingEnabled=false;ctx.drawImage(o.sprite,o.x,o.y,o.w,o.h)}else{ctx.fillStyle='#53B5AF';ctx.fillRect(o.x,o.y,o.w,o.h)}
-      if(o.x+o.w<0)obstacles.splice(i,1)
-      if(!o.passed&&o.x+o.w<player.x){o.passed=true;score++;updateHud()}
-      if(!gameOver&&rectsOverlap(playerHitbox(player),obstacleHitbox(o))){gameOver=true;if(score>best){best=score;updateHud()}}
-    }
     for(var i=obstacles.length-1;i>=0;i--){var o=obstacles[i];o.x-=worldSpeed;if(o.sprite&&o.sprite.complete){ctx.imageSmoothingEnabled=false;ctx.drawImage(o.sprite,o.x,o.y,o.w,o.h)}else{ctx.fillStyle='#53B5AF';ctx.fillRect(o.x,o.y,o.w,o.h)}if(o.x+o.w<0)obstacles.splice(i,1);if(!o.passed&&o.x+o.w<player.x){o.passed=true;score++;updateHud()}if(!gameOver&&rectsOverlap(playerHitbox(player),obstacleHitbox(o))){gameOver=true;if(score>best){best=score;updateHud()}}}
     drawPlayer()
     if(!ready){drawCountdown();return}
@@ -227,7 +180,6 @@
   document.getElementById('newSession').onclick=openReg
   function updateHud(){scoreEl.textContent=String(score);bestEl.textContent=String(best)}
 
-  var regOverlay=document.getElementById('regOverlay');var resultOverlay=document.getElementById('resultOverlay');var startBtn=document.getElementById('startBtn');var resultOk=document.getElementById('resultOk');var regErr=document.getElementById('regErr');var lastNameIn=document.getElementById('lastName');var firstNameIn=document.getElementById('firstName');var middleNameIn=document.getElementById('middleName');var phoneIn=document.getElementById('phone');var emailIn=document.getElementById('email');var consentIn=document.getElementById('consent');var finalBest=document.getElementById('finalBest');var prizeText=document.getElementById('prizeText')
   var regOverlay=document.getElementById('regOverlay');var resultOverlay=document.getElementById('resultOverlay');var startBtn=document.getElementById('startBtn');var regErr=document.getElementById('regErr');var lastNameIn=document.getElementById('lastName');var firstNameIn=document.getElementById('firstName');var middleNameIn=document.getElementById('middleName');var phoneIn=document.getElementById('phone');var emailIn=document.getElementById('email');var consentIn=document.getElementById('consent');var finalBest=document.getElementById('finalBest');var prizeText=document.getElementById('prizeText');var sendLeadBtn=document.getElementById('sendLead');var toRegBtn=document.getElementById('toReg');var openGroupBtn=document.getElementById('openGroup')
 
   var profile=null,sessionEndAt=null,timerId=null
@@ -250,7 +202,6 @@
     startCountdown(function(){resetRun();tickTimer()})
   }
 
-  resultOk.onclick=function(){resultOverlay.style.display='none';openReg()}
   toRegBtn.onclick=function(){resultOverlay.style.display='none';openReg()}
   sendLeadBtn.onclick=function(){try{if(window.Telegram&&window.Telegram.WebApp){var payload={type:'lead',profile:profile,best:best,ts:Date.now()};window.Telegram.WebApp.sendData(JSON.stringify(payload))}}catch(e){}}
   openGroupBtn.onclick=function(){try{if(window.Telegram&&window.Telegram.WebApp)window.Telegram.WebApp.openLink(GROUP_URL,{try_instant_view:false});else window.open(GROUP_URL,'_blank')}catch(e){}}
@@ -259,16 +210,6 @@
   function fmt(ms){var s=Math.ceil(ms/1000),m=Math.floor(s/60),ss=('0'+(s%60)).slice(-2);return('0'+m).slice(-2)+':'+ss}
   function sessionActive(){return sessionEndAt&&Date.now()<sessionEndAt}
 
-  function showResults(){
-    finalBest.textContent=String(best);prizeText.textContent=getPrize(best)
-    try{
-      if(window.Telegram&&window.Telegram.WebApp){
-        var payload={type:'lead',profile:profile,best:best,ts:Date.now()}
-        window.Telegram.WebApp.sendData(JSON.stringify(payload))
-      }
-    }catch(e){}
-    resultOverlay.style.display='flex'
-  }
   function showResults(){finalBest.textContent=String(best);prizeText.textContent=getPrize(best);resultOverlay.style.display='flex'}
   function getPrize(p){if(p>=70)return'Термос';if(p>=50)return'Шоппер';if(p>=30)return'Блокнот и ручка';if(p>=20)return'Брелок';return'—'}
 
