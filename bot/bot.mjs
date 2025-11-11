@@ -5,10 +5,11 @@ import { fileURLToPath } from 'url'
 import { Bot } from 'grammy'
 
 const token = process.env.BOT_TOKEN
-const WEBAPP_URL = process.env.WEBAPP_URL
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID
+const WEBAPP_URL = process.env.WEBAPP_URL || ''
+const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID || ''
 
 if (!token) {
+  console.error('BOT_TOKEN не задан')
   process.exit(1)
 }
 
@@ -38,18 +39,17 @@ if (!fs.existsSync(LEADS_FILE)) {
 
 const bot = new Bot(token)
 
-await bot.api.deleteWebhook({ drop_pending_updates: false }).catch(() => {})
+try { await bot.api.deleteWebhook({ drop_pending_updates: false }) } catch {}
 
-const me = await bot.api.getMe()
-console.log(`Bot: @${me.username} (${me.id})`)
-console.log(`WEBAPP_URL: ${WEBAPP_URL}`)
+let me
+try { me = await bot.api.getMe() } catch (e) { console.error('getMe error:', e) }
+console.log(`Bot: @${me?.username || '-'} (${me?.id || '-'})`)
+console.log(`WEBAPP_URL: ${WEBAPP_URL || '-'}`)
 console.log(`ADMIN_CHAT_ID: ${ADMIN_CHAT_ID || '-'}`)
 console.log(`CSV: ${LEADS_FILE}`)
 
-bot.use(async (ctx, next) => {
-  try { console.log('UPDATE:', JSON.stringify(ctx.update)) } catch {}
-  return next()
-})
+bot.on('message:entities:url', async (ctx, next) => { try { console.log('UPDATE:', JSON.stringify(ctx.update)) } catch {}; return next() })
+bot.use(async (ctx, next) => { try { if (ctx.update.message?.web_app_data) console.log('web_app_data RAW:', ctx.update.message.web_app_data.data) } catch {}; return next() })
 
 bot.command('start', async (ctx) => {
   const replyMarkup = {
@@ -77,7 +77,6 @@ bot.command('ping', (ctx) => ctx.reply('pong'))
 bot.on('message:web_app_data', async (ctx) => {
   try {
     const raw = ctx.message.web_app_data?.data || '{}'
-    console.log('web_app_data RAW:', raw)
     const data = JSON.parse(raw)
     if (data.type !== 'lead') {
       await ctx.reply('Ок 👍')
@@ -86,22 +85,20 @@ bot.on('message:web_app_data', async (ctx) => {
     const p = data.profile || {}
     const best = Number(data.best || 0)
     const prize = getPrize(best)
-    const line =
-      [
-        new Date().toLocaleString('ru-RU'),
-        p.lastName || '',
-        p.firstName || '',
-        p.middleName || '',
-        p.phone || '',
-        p.email || '',
-        best,
-        prize
-      ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',') + '\n'
+    const line = [
+      new Date().toLocaleString('ru-RU'),
+      p.lastName || '',
+      p.firstName || '',
+      p.middleName || '',
+      p.phone || '',
+      p.email || '',
+      best,
+      prize
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',') + '\n'
     fs.appendFileSync(LEADS_FILE, line, 'utf8')
-    console.log('APPENDED to CSV')
     const msg = [
       '📋 Новый участник',
-      `👤 ${[p.lastName, p.firstName, p.middleName].filter(Boolean).join(' ')}`,
+      `👤 ${[p.lastName, p.firstName, p.middleName].filter(Boolean).join(' ') || '—'}`,
       `📞 ${p.phone || '-'}`,
       `📧 ${p.email || '-'}`,
       `🏆 Очки: ${best}`,
@@ -111,7 +108,7 @@ bot.on('message:web_app_data', async (ctx) => {
     await ctx.reply('Результат получен ✅')
   } catch (e) {
     console.error('web_app_data error:', e)
-    await ctx.reply('Ошибка обработки данных.')
+    try { await ctx.reply('Ошибка обработки данных.') } catch {}
   }
 })
 
@@ -123,9 +120,5 @@ function getPrize(p) {
   return '—'
 }
 
-bot.on('message', (ctx) => {
-  console.log('message:', ctx.message?.text || ctx.message?.message_id)
-})
-
-bot.start()
-console.log('Bot started. Жду web_app_data…')
+bot.catch((err) => console.error('Bot error:', err))
+bot.start().then(() => console.log('Bot started. Жду web_app_data…'))
