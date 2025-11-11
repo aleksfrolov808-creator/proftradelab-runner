@@ -122,3 +122,4 @@ function getPrize(p) {
 
 bot.catch((err) => console.error('Bot error:', err))
 bot.start().then(() => console.log('Bot started. Жду web_app_data…'))
+
