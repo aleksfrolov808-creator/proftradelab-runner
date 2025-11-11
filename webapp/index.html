@@ -45,13 +45,17 @@
 <body>
   <div id="app-root">
     <div class="wrap">
-      <div class="card">
+      <div class="card" id="cardRoot">
         <h1>🧪 ПрофТрейдЛаб 8-bit Runner</h1>
         <div class="gameBox">
           <canvas id="game" width="1200" height="400"></canvas>
           <div class="bar">
             <div>Очки: <span id="score">0</span> · Рекорд: <span id="best">0</span> · Осталось: <span id="timeLeft">02:00</span><div class="hint">Управление: Space / ⬆︎ / Тап · Двойной прыжок — второй слабее</div></div>
-            <div style="display:flex;gap:8px"><button id="restart" class="btn">Заново</button><button id="newSession" class="btn brand">Регистрация</button></div>
+            <div style="display:flex;gap:8px">
+              <button id="fsBtn" class="btn">Во весь экран</button>
+              <button id="restart" class="btn">Заново</button>
+              <button id="newSession" class="btn brand">Регистрация</button>
+            </div>
           </div>
         </div>
       </div>
@@ -134,24 +138,12 @@
   function drawDecos(){var bgSpeed=worldSpeed*0.5;for(var i=bgDecos.length-1;i>=0;i--){var d=bgDecos[i];d.x-=bgSpeed;if(d.img&&d.img.complete){ctx.imageSmoothingEnabled=false;ctx.drawImage(d.img,d.x,d.y,d.w,d.h)}if(d.x<-d.w-20)bgDecos.splice(i,1)}}
 
   var playerSprites={run:[Object.assign(new Image(),{src:"assets/player_run1.png"}),Object.assign(new Image(),{src:"assets/player_run2.png"})],jump:Object.assign(new Image(),{src:"assets/player_jump.png"})};
-  var RUN_FRAME_MS=170,playerAnimTimerMs=0,playerAnimFrame=0,lastFrameTs=(performance&&performance.now)?performance.now():Date.now();
+  var RUN_FRAME_MS=140,playerAnimTimerMs=0,playerAnimFrame=0,lastFrameTs=(performance&&performance.now)?performance.now():Date.now();
   function drawPlayer(){var inAir=!player.onGround;if(inAir){var imgJ=playerSprites.jump;if(imgJ&&imgJ.complete)ctx.drawImage(imgJ,player.x,player.y,player.w,player.h)}else{var now=(performance&&performance.now)?performance.now():Date.now();var dt=Math.min(100,now-lastFrameTs);lastFrameTs=now;playerAnimTimerMs+=dt;if(playerAnimTimerMs>=RUN_FRAME_MS){playerAnimTimerMs-=RUN_FRAME_MS;playerAnimFrame=(playerAnimFrame+1)%2}var imgR=playerSprites.run[playerAnimFrame];if(imgR&&imgR.complete)ctx.drawImage(imgR,player.x,player.y,player.w,player.h)}}
 
-  const GRAVITY_RISE=0.60;
-  const GRAVITY_FALL=0.38;
-  const MAX_FALL=5.8;
-  const JUMP_VEL1=-12.6;
-  const JUMP_VEL2=-10.2;
-  const JUMP2_MS=700;
-
-  const TARGET_END_SPEED=8.8;
-  const SESSION_LEN_S=120;
-  const SPEED_START=3.8;
-  const SPEED_ACCEL=(TARGET_END_SPEED-SPEED_START)/SESSION_LEN_S;
-
-  const SPAWN_MIN=420;
-  const SPAWN_VAR=340;
-
+  var GRAVITY=0.70,JUMP_VEL1=-12.2,JUMP_VEL2=-9.5,JUMP2_WINDOW_MS=420,JUMP2_MIN_UP_VY=2.5;
+  var TARGET_END_SPEED=11.8,SESSION_LEN_S=120,SPEED_START=4.9,SPEED_ACCEL=(TARGET_END_SPEED-SPEED_START)/SESSION_LEN_S;
+  var SPAWN_MIN=340,SPAWN_VAR=300;
   var worldSpeed=SPEED_START,score=0,best=0,gameOver=false,ready=false,runStart=Date.now();var rafId=null;
   var player={x:50,y:GROUND_Y-56,w:56,h:56,vy:0,onGround:true,jumpCount:0,maxJumps:2,firstJumpAt:0};
 
@@ -166,22 +158,7 @@
   function obstacleHitbox(o){var w,h;if(o.type===2){w=o.w*OB_HIGH_HIT_W;h=o.h*OB_HIGH_HIT_H}else{w=o.w*OB_HIT_W;h=o.h*OB_HIT_H}var x=o.x+(o.w-w)/2;var isAir=o.y<(GROUND_Y-o.h);var y=isAir?(o.y+(o.h-h)/2):(o.y+(o.h-h));return{x:x,y:y,w:w,h:h}}
   function rectsOverlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 
-  function jump(){
-    if(gameOver||!sessionActive()||!ready)return;
-    if(player.onGround){
-      player.vy=JUMP_VEL1;
-      player.onGround=false;
-      player.jumpCount=1;
-      player.firstJumpAt=Date.now();
-      return;
-    }
-    var since=Date.now()-player.firstJumpAt;
-    if(player.jumpCount===1&&since<=JUMP2_MS){
-      player.vy=JUMP_VEL2;
-      player.jumpCount=2;
-    }
-  }
-
+  function jump(){if(gameOver||!sessionActive()||!ready)return;if(player.onGround){player.vy=JUMP_VEL1;player.onGround=false;player.jumpCount=1;player.firstJumpAt=Date.now();return}var since=Date.now()-player.firstJumpAt;if(player.jumpCount===1&&since<=JUMP2_WINDOW_MS&&player.vy<JUMP2_MIN_UP_VY){player.vy=JUMP_VEL2;player.jumpCount=2}}
   window.addEventListener('keydown',function(e){if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();jump()}if(e.code==='Enter'&&(gameOver||!sessionActive()))startCountdown(function(){resetRun();tickTimer()})})
   canvas.addEventListener('pointerdown',jump)
 
@@ -193,28 +170,9 @@
     var elapsedSec=(Date.now()-runStart)/1000;worldSpeed=SPEED_START+SPEED_ACCEL*elapsedSec
     spawnTimer-=worldSpeed
     if(spawnTimer<=0){spawnObstacle();var bonusGap=(Math.random()<0.18)?160:0;spawnTimer=SPAWN_MIN+Math.random()*SPAWN_VAR+bonusGap}
-
-    var g = player.vy<0 ? GRAVITY_RISE : GRAVITY_FALL;
-    player.vy += g;
-    if(player.vy>MAX_FALL) player.vy=MAX_FALL;
-    player.y += player.vy;
-
-    if(player.y>=GROUND_Y-player.h){
-      player.y=GROUND_Y-player.h;player.vy=0;
-      if(!player.onGround){player.onGround=true;player.jumpCount=0}
-    }else{
-      player.onGround=false
-    }
-
-    for(var i=obstacles.length-1;i>=0;i--){
-      var o=obstacles[i];
-      o.x-=worldSpeed;
-      if(o.sprite&&o.sprite.complete){ctx.imageSmoothingEnabled=false;ctx.drawImage(o.sprite,o.x,o.y,o.w,o.h)}else{ctx.fillStyle='#53B5AF';ctx.fillRect(o.x,o.y,o.w,o.h)}
-      if(o.x+o.w<0)obstacles.splice(i,1);
-      if(!o.passed&&o.x+o.w<player.x){o.passed=true;score++;updateHud()}
-      if(!gameOver&&rectsOverlap(playerHitbox(player),obstacleHitbox(o))){gameOver=true;if(score>best){best=score;updateHud()}}
-    }
-
+    player.vy+=GRAVITY;player.y+=player.vy
+    if(player.y>=GROUND_Y-player.h){player.y=GROUND_Y-player.h;player.vy=0;if(!player.onGround){player.onGround=true;player.jumpCount=0}}else{player.onGround=false}
+    for(var i=obstacles.length-1;i>=0;i--){var o=obstacles[i];o.x-=worldSpeed;if(o.sprite&&o.sprite.complete){ctx.imageSmoothingEnabled=false;ctx.drawImage(o.sprite,o.x,o.y,o.w,o.h)}else{ctx.fillStyle='#53B5AF';ctx.fillRect(o.x,o.y,o.w,o.h)}if(o.x+o.w<0)obstacles.splice(i,1);if(!o.passed&&o.x+o.w<player.x){o.passed=true;score++;updateHud()}if(!gameOver&&rectsOverlap(playerHitbox(player),obstacleHitbox(o))){gameOver=true;if(score>best){best=score;updateHud()}}}
     drawPlayer()
     if(!ready){drawCountdown();return}
     if(gameOver)return
@@ -226,7 +184,7 @@
   document.getElementById('newSession').onclick=openReg
   function updateHud(){scoreEl.textContent=String(score);bestEl.textContent=String(best)}
 
-  var regOverlay=document.getElementById('regOverlay');var resultOverlay=document.getElementById('resultOverlay');var startBtn=document.getElementById('startBtn');var regErr=document.getElementById('regErr');var lastNameIn=document.getElementById('lastName');var firstNameIn=document.getElementById('firstName');var middleNameIn=document.getElementById('middleName');var phoneIn=document.getElementById('phone');var emailIn=document.getElementById('email');var consentIn=document.getElementById('consent');var finalBest=document.getElementById('finalBest');var prizeText=document.getElementById('prizeText');var sendLeadBtn=document.getElementById('sendLead');var toRegBtn=document.getElementById('toReg');var openGroupBtn=document.getElementById('openGroup')
+  var regOverlay=document.getElementById('regOverlay');var resultOverlay=document.getElementById('resultOverlay');var startBtn=document.getElementById('startBtn');var regErr=document.getElementById('regErr');var lastNameIn=document.getElementById('lastName');var firstNameIn=document.getElementById('firstName');var middleNameIn=document.getElementById('middleName');var phoneIn=document.getElementById('phone');var emailIn=document.getElementById('email');var consentIn=document.getElementById('consent');var finalBest=document.getElementById('finalBest');var prizeText=document.getElementById('prizeText');var sendLeadBtn=document.getElementById('sendLead');var toRegBtn=document.getElementById('toReg');var openGroupBtn=document.getElementById('openGroup');var fsBtn=document.getElementById('fsBtn');var cardRoot=document.getElementById('cardRoot')
 
   var profile=null,sessionEndAt=null,timerId=null
   function openReg(){regErr.textContent='';regOverlay.style.display='flex'}
@@ -263,6 +221,15 @@
   function drawCountdown(n){drawBackground();updateDecoSpawner((performance&&performance.now?performance.now():Date.now()));drawDecos();var g=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);g.addColorStop(0,'#53B5AF');g.addColorStop(1,'#53B5AF');ctx.fillStyle=g;ctx.fillRect(0,GROUND_Y,W,2);ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(0,0,W,H);ctx.font='bold 56px monospace';ctx.textAlign='center';ctx.fillStyle='#53B5AF';ctx.fillText((typeof n==='number')?n:' ',W/2,H/2)}
   function dimOverlay(msg){ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,W,H);ctx.font='16px monospace';ctx.textAlign='center';ctx.fillStyle='#ffffff';ctx.fillText(msg,W/2,H/2)}
   function resetRun(){runStart=Date.now();worldSpeed=SPEED_START;score=0;gameOver=false;player.y=GROUND_Y-player.h;player.vy=0;player.onGround=true;player.jumpCount=0;playerAnimTimerMs=0;playerAnimFrame=0;lastFrameTs=(performance&&performance.now)?performance.now():Date.now();obstacles.length=0;spawnTimer=0;bgDecos.length=0;bgOffset=0;scheduleNextDeco();if(rafId)cancelAnimationFrame(rafId);rafId=null;loop()}
+
+  function fsElement(){return document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement}
+  function enterFS(el){if(el.requestFullscreen)el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();else if(el.msRequestFullscreen)el.msRequestFullscreen()}
+  function exitFS(){if(document.exitFullscreen)document.exitFullscreen();else if(document.webkitExitFullscreen)document.webkitExitFullscreen();else if(document.msExitFullscreen)document.msExitFullscreen()}
+  function updateFsBtn(){fsBtn.textContent=fsElement()?'Свернуть':'Во весь экран';setAppHeight();resizeCanvas()}
+  fsBtn.onclick=function(){if(fsElement())exitFS();else enterFS(document.getElementById('cardRoot'))}
+  document.addEventListener('fullscreenchange',updateFsBtn)
+  document.addEventListener('webkitfullscreenchange',updateFsBtn)
+  document.addEventListener('msfullscreenchange',updateFsBtn)
 
   resizeCanvas();document.getElementById('regOverlay').style.display='flex';
   (function(){ctx.fillStyle='#000000';ctx.fillRect(0,0,W,H);var g=ctx.createLinearGradient(0,GROUND_Y,W,GROUND_Y);g.addColorStop(0,'#53B5AF');g.addColorStop(1,'#53B5AF');ctx.fillStyle=g;ctx.fillRect(0,GROUND_Y,W,2)})()
